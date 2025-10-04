@@ -1,0 +1,9 @@
+{
+  "name": "checklocktimeverify",
+  "fullname": "CHECKLOCKTIMEVERIFY Timelock [SIGNET-PRODUCTION]",
+  "description": "Create time-locked Bitcoin addresses using OP_CHECKLOCKTIMEVERIFY (BIP-65).\nLock funds until a specific block height or timestamp is reached.\n\n⚠️  SIGNET-PRODUCTION quality proof of concept!\nSponsored by Vibes Capital Management 🚀\nFor educational purposes only - NOT for mainnet!",
+  "available_for": ["qt"],
+  "author": "Sponsored by Vibes Capital Management",
+  "license": "MIT",
+  "version": "0.0.1"
+}

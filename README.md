@@ -1,5 +1,20 @@
-This repository serves as an example for external plugins.
-It contains code for a simple plugin that creates a virtual keyboard in the Qt GUI of Electrum.
+This repository contains example Electrum plugins demonstrating various features and capabilities.
+
+## Available Plugins
+
+### 1. VirtualKeyboard (Simple Example)
+A basic plugin that creates a virtual keyboard in the Qt GUI password dialogs.
+- **Complexity**: Beginner
+- **Lines of Code**: ~100
+- **Demonstrates**: Basic plugin structure, hooks, Qt GUI integration
+
+### 2. CHECKLOCKTIMEVERIFY (Advanced Example)
+A comprehensive plugin implementing BIP-65 CHECKLOCKTIMEVERIFY for creating time-locked Bitcoin addresses.
+- **Complexity**: Advanced
+- **Lines of Code**: ~700 (plus 2,000+ lines of documentation)
+- **Demonstrates**: Bitcoin script construction, P2SH addresses, complex GUI, real-world use cases
+
+See `ELECTRUM_PLUGIN_DEVELOPMENT_GUIDE.md` for a complete guide to developing Electrum plugins.
 
 ## Publishing a plugin as .zip file
 
