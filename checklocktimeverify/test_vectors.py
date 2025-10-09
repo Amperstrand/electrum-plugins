@@ -1,0 +1,43 @@
+"""
+BIP-32 Test Vectors for CLTV Plugin Testing
+
+Source: https://en.bitcoin.it/wiki/BIP_0032_TestVectors
+
+⚠️⚠️⚠️ FOR TESTING ONLY - DO NOT USE ON MAINNET ⚠️⚠️⚠️
+These keys are publicly known test vectors - anyone can spend coins sent to them!
+"""
+
+# Test Vector 1 - Chain m (Master)
+BIP32_V1_M_PUBKEY = "0339a36013301597daef41fbe593a02cc513d0b55527ec2df1050e2e8ff49c85c2"
+BIP32_V1_M_PRIVKEY_WIF = "L52XzL2cMkHxqxBXRyEpnPQZGUs3uKiL3R11XbAdHigRzDozKZeW"
+BIP32_V1_M_PRIVKEY_HEX = "e8f32e723decf4051aefac8e2c93c9c5b214313817cdb01a1494b917c8436b35"
+
+# Test Vector 1 - Chain m/0' (First hardened child)
+BIP32_V1_M0H_PUBKEY = "035a784662a4a20a65bf6aab9ae98a6c068a81c52e4b032c0fb5400c706cfccc56"
+BIP32_V1_M0H_PRIVKEY_WIF = "L5BmPijJjrKbiUfG4zbiFKNqkvuJ8usooJmzuD7Z8dkRoTThYnAT"
+BIP32_V1_M0H_PRIVKEY_HEX = "edb2e14f9ee77d26dd93b4ecede8d16ed408ce149b6cd80b0715a2d911a0afea"
+
+# Test Vector 1 - Chain m/0'/1 (Second level)
+BIP32_V1_M0H1_PUBKEY = "03501e454bf00751f24b1b489aa925215d66af2234e3891c3b21a52bedb3cd711c"
+BIP32_V1_M0H1_PRIVKEY_WIF = "KyFAjQ5rgrKvhXvNMtFB5PCSKUYD1yyPEe3xr3T34TZSUHycXtMM"
+BIP32_V1_M0H1_PRIVKEY_HEX = "3c6cb8d0f6a264c91ea8b5030fadaa8e538b020f0a387421a12de9319dc93368"
+
+# Test Vector 2 - Chain m (Different master for variety)
+BIP32_V2_M_PUBKEY = "03cbcaa9c98c877a26977d00825c956a238e8dddfbd322cce4f74b0b5bd6ace4a7"
+BIP32_V2_M_PRIVKEY_WIF = "KyjXhyHF9wTphBkfpxjL8hkDXDUSbE3tKANT94kXSyh6vn6nKaoy"
+BIP32_V2_M_PRIVKEY_HEX = "4b03d6fc340455b363f51020ad3ecca4f0850280cf436c70c727923f6db46c3e"
+
+# Convenience collections
+ALL_TEST_PUBKEYS = [
+    BIP32_V1_M_PUBKEY,
+    BIP32_V1_M0H_PUBKEY,
+    BIP32_V1_M0H1_PUBKEY,
+    BIP32_V2_M_PUBKEY,
+]
+
+ALL_TEST_PRIVKEYS_WIF = [
+    BIP32_V1_M_PRIVKEY_WIF,
+    BIP32_V1_M0H_PRIVKEY_WIF,
+    BIP32_V1_M0H1_PRIVKEY_WIF,
+    BIP32_V2_M_PRIVKEY_WIF,
+]
