@@ -1,9 +1,10 @@
 {
   "name": "checklocktimeverify",
-  "fullname": "CHECKLOCKTIMEVERIFY Timelock [SIGNET-PRODUCTION]",
-  "description": "Create time-locked Bitcoin addresses using OP_CHECKLOCKTIMEVERIFY (BIP-65).\nLock funds until a specific block height or timestamp is reached.\n\n⚠️  SIGNET-PRODUCTION quality proof of concept!\nSponsored by Vibes Capital Management 🚀\nFor educational purposes only - NOT for mainnet!",
+  "fullname": "BIP-65 CLTV Examples [SIGNET-PRODUCTION]",
+  "description": "Educational implementation of all 5 BIP-65 CHECKLOCKTIMEVERIFY examples: Freezing Funds, Escrow, Two-Factor Wallets, Payment Channels, and Trustless Payments for Publishing Data.\n\nCreate time-locked Bitcoin addresses using OP_CHECKLOCKTIMEVERIFY with exact BIP-65 script patterns.\n\n✨ Features: Educational logging with BIP-65 quotes, script breakdowns & opcode explanations!\n⚠️  SIGNET-PRODUCTION quality - For learning and testing!\nSponsored by Vibes Capital Management 🚀\nNOT for mainnet - Educational purposes only!",
   "available_for": ["qt"],
   "author": "Sponsored by Vibes Capital Management",
   "license": "MIT",
-  "version": "0.0.1"
+  "icon": "timelock_icon.svg",
+  "version": "0.3.0"
 }

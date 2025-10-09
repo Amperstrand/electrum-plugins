@@ -1,0 +1,111 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Testing
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.hypothesis/
+
+# Development & Session Docs (keep locally, don't commit)
+*.sh
+*_STATUS.md
+*_COMPLETE.md
+*_PROGRESS*.md
+*_FIX*.md
+*TROUBLESHOOTING*.md
+CHANGELOG.md
+CURRENT_STATUS.md
+FINAL-STATUS.md
+SESSION_COMPLETE.md
+PLAN_*.md
+PHASE*.md
+QUICK_*.md
+DEBUG_*.md
+SWEEP_*.md
+STORAGE_FIX.md
+UTXO_*.md
+UI_TESTING*.md
+LOGGING_*.md
+REFACTORING_*.md
+ALIGNMENT_*.md
+ALL_TABS_*.md
+DATETIME_*.md
+KEY_MAPPING.md
+PACKAGE.md
+RELEASE_*.md
+TERMINOLOGY_CHANGES.md
+TEST_EXECUTION_LOG.md
+TESTING_NOW.md
+TEST_NOW.md
+SWEEP_NOW.md
+VERIFICATION_COMMANDS.md
+VIBES_SPONSORSHIP.md
+VISUALIZER-ENHANCEMENTS.md
+PLUGIN_NAME_UPDATE.md
+
+# Electrum-specific
+*.json.backup
+cltv_timelock_data.json
+
+# Logs
+*.log
+debug.log
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Images (keep SVG icon, exclude others)
+*.jpg
+*.jpeg
+*.png
+!timelock_icon.svg
+
+# Notes
+notes_on_*.md
+plan_to_*.md
+examples_from_bip.md
+test_vectors.md
+
+# Keep these essential files:
+# README.md
+# BIP65-TERMINOLOGY.md
+# TERMINOLOGY-CONSISTENCY.md
+# DRY-ANALYSIS.md
+# TEST-RESULTS.md
+# PRE-COMMIT-CHECKLIST.md
+# bip-0065.mediawiki

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <!-- Clock face -->
+  <circle cx="32" cy="28" r="18" fill="none" stroke="#2c3e50" stroke-width="2.5"/>
+  
+  <!-- Clock hands -->
+  <line x1="32" y1="28" x2="32" y2="18" stroke="#e74c3c" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="32" y1="28" x2="40" y2="32" stroke="#2c3e50" stroke-width="2" stroke-linecap="round"/>
+  
+  <!-- Lock body -->
+  <rect x="20" y="42" width="24" height="16" rx="2" fill="none" stroke="#2c3e50" stroke-width="2.5"/>
+  
+  <!-- Lock shackle -->
+  <path d="M24 42 L24 36 Q24 30 32 30 Q40 30 40 36 L40 42" fill="none" stroke="#2c3e50" stroke-width="2.5"/>
+  
+  <!-- Lock keyhole -->
+  <circle cx="32" cy="50" r="2.5" fill="#2c3e50"/>
+  <rect x="31" y="50" width="2" height="4" fill="#2c3e50"/>
+  
+  <!-- Clock center dot -->
+  <circle cx="32" cy="28" r="2" fill="#e74c3c"/>
+</svg>
