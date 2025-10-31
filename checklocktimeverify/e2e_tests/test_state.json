@@ -1,0 +1,419 @@
+{
+  "cltv_simple": {
+    "p2wsh": [
+      {
+        "test_number": 1,
+        "created_at": "2025-10-28T13:42:10.952781",
+        "locktime": 275844,
+        "script_type": "cltv_simple_p2wsh",
+        "script_params": {
+          "locktime": 275844,
+          "pubkey": "02c6047f9441ed7d6d3045406e95c07cd85c778e4b8cef3ca7abac09b95c709ee5"
+        },
+        "current_height_at_creation": 275844,
+        "script_hex": "03843504b1752102c6047f9441ed7d6d3045406e95c07cd85c778e4b8cef3ca7abac09b95c709ee5ac",
+        "pubkey": "02c6047f9441ed7d6d3045406e95c07cd85c778e4b8cef3ca7abac09b95c709ee5",
+        "private_key_hex": "0000000000000000000000000000000000000000000000000000000000000002",
+        "format": "P2WSH",
+        "address": "tb1qkayfe3r9yj6jynq6ujc88n0qv7pju9fq70pw635gaue5swsvhqyslcmgk9",
+        "funding_txid": "e7209f13c6ad38eb01b0dd828b4200aa19804031fabe68cb468591c2611ecbcf",
+        "funding_vout": 0,
+        "amount_sats": 1001,
+        "status": "SWEPT",
+        "sweep_txid": "53d3ea6020891fb48e694e881b8fa15cbfad41536e185916551d6e659abffc34",
+        "notes": "P2WSH CLTV test. Awaiting manual funding",
+        "funded_at": "2025-10-28T13:44:16.969767",
+        "swept_at": "2025-10-28T13:44:45.881701"
+      }
+    ],
+    "taproot": [
+      {
+        "test_number": 10,
+        "address": "tb1pnkem7z7kv698fp0g2pvekclslrfp75nezfyqvmvarerexcsu0ggs42lg6w",
+        "locktime": 275844,
+        "pubkey": "02f9308a019258c31049344f85f89d5229b531c845836f99b08601f113bce036f9",
+        "private_key_hex": "0000000000000000000000000000000000000000000000000000000000000003",
+        "script_hex": "0484350400b17520f9308a019258c31049344f85f89d5229b531c845836f99b08601f113bce036f9ac",
+        "output_script": "51209db3bf0bd6668a7485e850599b63f0f8d21f52791248066d9d1e4793621c7a11",
+        "control_block": "c050929b74c1a04954b78b4b6035e97a5e078a5a0f28ec96d547bfee9ace803ac0",
+        "internal_key": "50929b74c1a04954b78b4b6035e97a5e078a5a0f28ec96d547bfee9ace803ac0",
+        "output_key": "9db3bf0bd6668a7485e850599b63f0f8d21f52791248066d9d1e4793621c7a11",
+        "script_type": "cltv_simple",
+        "format": "TAPROOT",
+        "amount_sats": 1110,
+        "funding_txid": "e7209f13c6ad38eb01b0dd828b4200aa19804031fabe68cb468591c2611ecbcf",
+        "funding_vout": 9,
+        "status": "SWEPT",
+        "sweep_txid": "MANUAL_SWEEP_NEEDED",
+        "notes": "Simple CLTV taproot - using working taproot_tx_builder.py",
+        "funded_at": "2025-10-28T13:44:16.969820",
+        "swept_at": "2025-10-28T13:45:00"
+      }
+    ]
+  },
+  "last_updated": "2025-10-28T14:55:36.508655",
+  "cltv_escrow": {
+    "p2wsh_normal_operations": [
+      {
+        "test_number": 2,
+        "created_at": "2025-10-28T13:42:12.049274",
+        "locktime": 275844,
+        "script_type": "cltv_escrow_p2wsh",
+        "script_params": {
+          "locktime": 275844,
+          "alice_pubkey": "03d30199d74fb5a22d47b6e054e2f378cedacffcb89904a61d75d0dbd407143e65",
+          "bob_pubkey": "021697ffa6fd9de627c077e3d2fe541084ce13300b0bec1146f95ae57f0d0bd6a5",
+          "lenny_pubkey": "031be68a5a028f2601d0e80d468c344ba331d611b96c358b6032e8b4da0547fc11"
+        },
+        "current_height_at_creation": 275844,
+        "path": "normal_operations",
+        "script_hex": "6303843504b17521031be68a5a028f2601d0e80d468c344ba331d611b96c358b6032e8b4da0547fc11ad516752682103d30199d74fb5a22d47b6e054e2f378cedacffcb89904a61d75d0dbd407143e6521021697ffa6fd9de627c077e3d2fe541084ce13300b0bec1146f95ae57f0d0bd6a552ae",
+        "alice_pubkey": "03d30199d74fb5a22d47b6e054e2f378cedacffcb89904a61d75d0dbd407143e65",
+        "alice_private_key_repr": "<ECPrivkey 03d30199d74fb5a22d47b6e054e2f378cedacffcb89904a61d75d0dbd407143e65>",
+        "alice_private_key_hex": "0000000000000000000000000000000000000000000000000000000000000020",
+        "bob_pubkey": "021697ffa6fd9de627c077e3d2fe541084ce13300b0bec1146f95ae57f0d0bd6a5",
+        "bob_private_key_repr": "<ECPrivkey 021697ffa6fd9de627c077e3d2fe541084ce13300b0bec1146f95ae57f0d0bd6a5>",
+        "bob_private_key_hex": "0000000000000000000000000000000000000000000000000000000000000021",
+        "lenny_pubkey": "031be68a5a028f2601d0e80d468c344ba331d611b96c358b6032e8b4da0547fc11",
+        "lenny_private_key_repr": "<ECPrivkey 031be68a5a028f2601d0e80d468c344ba331d611b96c358b6032e8b4da0547fc11>",
+        "lenny_private_key_hex": "0000000000000000000000000000000000000000000000000000000000000022",
+        "format": "P2WSH",
+        "address": "tb1q8fa0mxu6y2nf83exkmfz4xrxpwzkylzcqct98pz3ydzk7j3k6dzsjtsv9v",
+        "funding_txid": "e7209f13c6ad38eb01b0dd828b4200aa19804031fabe68cb468591c2611ecbcf",
+        "funding_vout": 1,
+        "amount_sats": 1002,
+        "status": "SWEPT",
+        "sweep_txid": "53c2b70691391046db0267a605ddc312844b345f7b24786ff22f9be848b9d2da",
+        "notes": "P2WSH escrow normal operations (Alice+Bob 2-of-2 multisig)",
+        "funded_at": "2025-10-28T13:44:16.969788",
+        "swept_at": "2025-10-28T13:45:01.085120"
+      }
+    ],
+    "p2wsh_arbitration": [
+      {
+        "test_number": 3,
+        "created_at": "2025-10-28T13:42:13.036429",
+        "locktime": 275844,
+        "script_type": "cltv_escrow_p2wsh",
+        "script_params": {
+          "locktime": 275844,
+          "alice_pubkey": "03d30199d74fb5a22d47b6e054e2f378cedacffcb89904a61d75d0dbd407143e65",
+          "bob_pubkey": "021697ffa6fd9de627c077e3d2fe541084ce13300b0bec1146f95ae57f0d0bd6a5",
+          "lenny_pubkey": "031be68a5a028f2601d0e80d468c344ba331d611b96c358b6032e8b4da0547fc11"
+        },
+        "current_height_at_creation": 275844,
+        "path": "arbitration",
+        "script_hex": "6303843504b17521031be68a5a028f2601d0e80d468c344ba331d611b96c358b6032e8b4da0547fc11ad516752682103d30199d74fb5a22d47b6e054e2f378cedacffcb89904a61d75d0dbd407143e6521021697ffa6fd9de627c077e3d2fe541084ce13300b0bec1146f95ae57f0d0bd6a552ae",
+        "alice_pubkey": "03d30199d74fb5a22d47b6e054e2f378cedacffcb89904a61d75d0dbd407143e65",
+        "alice_private_key_repr": "<ECPrivkey 03d30199d74fb5a22d47b6e054e2f378cedacffcb89904a61d75d0dbd407143e65>",
+        "alice_private_key_hex": "0000000000000000000000000000000000000000000000000000000000000020",
+        "bob_pubkey": "021697ffa6fd9de627c077e3d2fe541084ce13300b0bec1146f95ae57f0d0bd6a5",
+        "bob_private_key_repr": "<ECPrivkey 021697ffa6fd9de627c077e3d2fe541084ce13300b0bec1146f95ae57f0d0bd6a5>",
+        "bob_private_key_hex": "0000000000000000000000000000000000000000000000000000000000000021",
+        "lenny_pubkey": "031be68a5a028f2601d0e80d468c344ba331d611b96c358b6032e8b4da0547fc11",
+        "lenny_private_key_repr": "<ECPrivkey 031be68a5a028f2601d0e80d468c344ba331d611b96c358b6032e8b4da0547fc11>",
+        "lenny_private_key_hex": "0000000000000000000000000000000000000000000000000000000000000022",
+        "format": "P2WSH",
+        "address": "tb1q8fa0mxu6y2nf83exkmfz4xrxpwzkylzcqct98pz3ydzk7j3k6dzsjtsv9v",
+        "funding_txid": "e7209f13c6ad38eb01b0dd828b4200aa19804031fabe68cb468591c2611ecbcf",
+        "funding_vout": 2,
+        "amount_sats": 1003,
+        "status": "SWEPT",
+        "sweep_txid": "9ebd973952f12fb07e540252f86bd1ddf0e8fa001a29a3ffb8c9505bc2adae48",
+        "notes": "P2WSH escrow arbitration (Lenny+Alice 1-of-2 multisig after timeout)",
+        "funded_at": "2025-10-28T13:44:16.969792",
+        "swept_at": "2025-10-28T13:45:04.860555"
+      }
+    ]
+  },
+  "escrow": {
+    "taproot_normal": [
+      {
+        "test_number": 11,
+        "address": "tb1pafpumgcxn23c5emxjxfjdk5m80g68lmp999y9rpzmf2s7a52lxwqvfxwrx",
+        "locktime": 275844,
+        "alice_pubkey": "026eca335d9645307db441656ef4e65b4bfc579b27452bebc19bd870aa1118e5c3",
+        "alice_private_key": "0000000000000000000000000000000000000000000000000000000000000030",
+        "bob_pubkey": "03f2dac991cc4ce4b9ea44887e5c7c0bce58c80074ab9d4dbaeb28531b7739f530",
+        "bob_private_key": "0000000000000000000000000000000000000000000000000000000000000031",
+        "lenny_pubkey": "0229757774cc6f3be1d5f1774aefa8f02e50bc64404230e7a67e8fde79bd559a9a",
+        "lenny_private_key": "0000000000000000000000000000000000000000000000000000000000000032",
+        "output_key": "ea43cda3069aa38a6766919326da9b3bd1a3ff61294a428c22da550f768af99c",
+        "merkle_root": "21c1f41ebe59d12da03ac5ed9cdff0d876b3424a034b7c98552c4b11c064ee64",
+        "internal_key": "50929b74c1a04954b78b4b6035e97a5e078a5a0f28ec96d547bfee9ace803ac0",
+        "normal_script": "206eca335d9645307db441656ef4e65b4bfc579b27452bebc19bd870aa1118e5c3ad20f2dac991cc4ce4b9ea44887e5c7c0bce58c80074ab9d4dbaeb28531b7739f530ac",
+        "normal_control": "c150929b74c1a04954b78b4b6035e97a5e078a5a0f28ec96d547bfee9ace803ac0b9a490d4cf0cb839acbced64c23adfffc801fefcc882953f25b9a15bd4622e13",
+        "arbitration_script": "03843504b1752029757774cc6f3be1d5f1774aefa8f02e50bc64404230e7a67e8fde79bd559a9aad206eca335d9645307db441656ef4e65b4bfc579b27452bebc19bd870aa1118e5c3ba20f2dac991cc4ce4b9ea44887e5c7c0bce58c80074ab9d4dbaeb28531b7739f530ba5287",
+        "arbitration_control": "c150929b74c1a04954b78b4b6035e97a5e078a5a0f28ec96d547bfee9ace803ac0899b9015c195533250884eb6602c7dee03b45d4fb29ebe8d6870cd8f4db2c355",
+        "script_type": "escrow",
+        "format": "TAPROOT",
+        "amount_sats": 1111,
+        "funding_txid": "080f8970e2dc15c27bebeda0af120ce31cb59e624e53d1108ec4d42c869da8b2",
+        "funding_vout": 0,
+        "status": "SWEPT",
+        "sweep_txid": "1171c3740cbc3f38aef1924363e07b8ee6cd851d43023148975df0ce68717d07",
+        "notes": "Taproot escrow - normal path (Alice + Bob)",
+        "funded_at": "2025-10-28T13:56:18.397501",
+        "swept_at": "2025-10-28T14:06:12.841522"
+      }
+    ],
+    "taproot_arbitration": [
+      {
+        "test_number": 12,
+        "address": "tb1phc3eldyuv07s7k5devjmaeau8y8syjnedr2addzz6a7u9ylngzzqakwe65",
+        "locktime": 275844,
+        "alice_pubkey": "026eca335d9645307db441656ef4e65b4bfc579b27452bebc19bd870aa1118e5c3",
+        "alice_private_key": "0000000000000000000000000000000000000000000000000000000000000030",
+        "bob_pubkey": "03f2dac991cc4ce4b9ea44887e5c7c0bce58c80074ab9d4dbaeb28531b7739f530",
+        "bob_private_key": "0000000000000000000000000000000000000000000000000000000000000031",
+        "lenny_pubkey": "0229757774cc6f3be1d5f1774aefa8f02e50bc64404230e7a67e8fde79bd559a9a",
+        "lenny_private_key": "0000000000000000000000000000000000000000000000000000000000000032",
+        "output_key": "be239fb49c63fd0f5a8dcb25bee7bc390f024a7968d5d6b442d77dc293f34084",
+        "merkle_root": "c70c43112011ea8df69c2835521ea4c02ef634a0ecbd54be65e8e809b7582e43",
+        "internal_key": "50929b74c1a04954b78b4b6035e97a5e078a5a0f28ec96d547bfee9ace803ac0",
+        "normal_script": "206eca335d9645307db441656ef4e65b4bfc579b27452bebc19bd870aa1118e5c3ad20f2dac991cc4ce4b9ea44887e5c7c0bce58c80074ab9d4dbaeb28531b7739f530ac",
+        "normal_control": "c150929b74c1a04954b78b4b6035e97a5e078a5a0f28ec96d547bfee9ace803ac0ee9ce98800187c875ee0cf1785b871d69beb1034340298918a22da9fa4e8beac",
+        "arbitration_script": "03843504b1752029757774cc6f3be1d5f1774aefa8f02e50bc64404230e7a67e8fde79bd559a9aba206eca335d9645307db441656ef4e65b4bfc579b27452bebc19bd870aa1118e5c3ba20f2dac991cc4ce4b9ea44887e5c7c0bce58c80074ab9d4dbaeb28531b7739f530ba5287",
+        "arbitration_control": "c150929b74c1a04954b78b4b6035e97a5e078a5a0f28ec96d547bfee9ace803ac0899b9015c195533250884eb6602c7dee03b45d4fb29ebe8d6870cd8f4db2c355",
+        "script_type": "escrow",
+        "format": "TAPROOT",
+        "amount_sats": 1112,
+        "funding_txid": "dc6ec23e0b6dfb8edc9ccedc0a92266626b3a819664ee5371fe8ff3b643199f4",
+        "funding_vout": 0,
+        "status": "SWEPT",
+        "sweep_txid": "c3653820a29161d224a073484abc43c5e1aa10de1e7df25b2bd3129f9c4691d2",
+        "notes": "Taproot escrow - arbitration path (Lenny + Alice) - REGENERATING with fixed CHECKSIGADD script",
+        "funded_at": "2025-10-28T14:33:57.362478",
+        "co_signer": "alice",
+        "swept_at": "2025-10-28T14:54:45.233036"
+      },
+      {
+        "test_number": 13,
+        "address": "tb1phc3eldyuv07s7k5devjmaeau8y8syjnedr2addzz6a7u9ylngzzqakwe65",
+        "locktime": 275844,
+        "alice_pubkey": "026eca335d9645307db441656ef4e65b4bfc579b27452bebc19bd870aa1118e5c3",
+        "alice_private_key": "0000000000000000000000000000000000000000000000000000000000000030",
+        "bob_pubkey": "03f2dac991cc4ce4b9ea44887e5c7c0bce58c80074ab9d4dbaeb28531b7739f530",
+        "bob_private_key": "0000000000000000000000000000000000000000000000000000000000000031",
+        "lenny_pubkey": "0229757774cc6f3be1d5f1774aefa8f02e50bc64404230e7a67e8fde79bd559a9a",
+        "lenny_private_key": "0000000000000000000000000000000000000000000000000000000000000032",
+        "script_type": "escrow",
+        "format": "TAPROOT",
+        "amount_sats": 1113,
+        "status": "SWEPT",
+        "notes": "Taproot escrow - arbitration path (Lenny + Bob)",
+        "co_signer": "bob",
+        "output_key": "be239fb49c63fd0f5a8dcb25bee7bc390f024a7968d5d6b442d77dc293f34084",
+        "merkle_root": "c70c43112011ea8df69c2835521ea4c02ef634a0ecbd54be65e8e809b7582e43",
+        "internal_key": "50929b74c1a04954b78b4b6035e97a5e078a5a0f28ec96d547bfee9ace803ac0",
+        "normal_script": "206eca335d9645307db441656ef4e65b4bfc579b27452bebc19bd870aa1118e5c3ad20f2dac991cc4ce4b9ea44887e5c7c0bce58c80074ab9d4dbaeb28531b7739f530ac",
+        "normal_control": "c150929b74c1a04954b78b4b6035e97a5e078a5a0f28ec96d547bfee9ace803ac0ee9ce98800187c875ee0cf1785b871d69beb1034340298918a22da9fa4e8beac",
+        "arbitration_script": "03843504b1752029757774cc6f3be1d5f1774aefa8f02e50bc64404230e7a67e8fde79bd559a9aba206eca335d9645307db441656ef4e65b4bfc579b27452bebc19bd870aa1118e5c3ba20f2dac991cc4ce4b9ea44887e5c7c0bce58c80074ab9d4dbaeb28531b7739f530ba5287",
+        "arbitration_control": "c150929b74c1a04954b78b4b6035e97a5e078a5a0f28ec96d547bfee9ace803ac0899b9015c195533250884eb6602c7dee03b45d4fb29ebe8d6870cd8f4db2c355",
+        "funding_txid": "dc6ec23e0b6dfb8edc9ccedc0a92266626b3a819664ee5371fe8ff3b643199f4",
+        "vout": 1,
+        "funding_vout": 1,
+        "sweep_txid": "a0fb4281eaa069adf9ba1b7b1212a74cb842e18ff473ac5cc758222236a50f7d",
+        "swept_at": "2025-10-28T14:55:36.508597"
+      }
+    ]
+  },
+  "cltv_twofactor": {
+    "p2wsh_normal": [
+      {
+        "test_number": 4,
+        "created_at": "2025-10-28T13:42:16.185673",
+        "locktime": 275844,
+        "script_type": "cltv_twofactor_p2wsh",
+        "script_params": {
+          "locktime": 275844,
+          "user_pubkey": "03bf23c1542d16eab70b1051eaf832823cfc4c6f1dcdbafd81e37918e6f874ef8b",
+          "service_pubkey": "03186b483d056a033826ae73d88f732985c4ccb1f32ba35f4b4cc47fdcf04aa6eb",
+          "recovery_pubkey": "03079264c4b4bfcd7fe3a7b7b92b6c439f3a5b3abcd29189bf7b54d781ff03d722"
+        },
+        "current_height_at_creation": 275844,
+        "path": "normal",
+        "script_hex": "632103186b483d056a033826ae73d88f732985c4ccb1f32ba35f4b4cc47fdcf04aa6ebad2103bf23c1542d16eab70b1051eaf832823cfc4c6f1dcdbafd81e37918e6f874ef8bac6703843504b1752103079264c4b4bfcd7fe3a7b7b92b6c439f3a5b3abcd29189bf7b54d781ff03d722ad2103bf23c1542d16eab70b1051eaf832823cfc4c6f1dcdbafd81e37918e6f874ef8bac68",
+        "user_pubkey": "03bf23c1542d16eab70b1051eaf832823cfc4c6f1dcdbafd81e37918e6f874ef8b",
+        "user_private_key_hex": "0000000000000000000000000000000000000000000000000000000000000040",
+        "service_pubkey": "03186b483d056a033826ae73d88f732985c4ccb1f32ba35f4b4cc47fdcf04aa6eb",
+        "service_private_key_hex": "0000000000000000000000000000000000000000000000000000000000000041",
+        "recovery_pubkey": "03079264c4b4bfcd7fe3a7b7b92b6c439f3a5b3abcd29189bf7b54d781ff03d722",
+        "recovery_private_key_hex": "0000000000000000000000000000000000000000000000000000000000000042",
+        "format": "P2WSH",
+        "address": "tb1qw259pt77pdw9wurrenw43q5djvc5r73cuzmh0rc2pdjtj83sflwqlt5exv",
+        "funding_txid": "e7209f13c6ad38eb01b0dd828b4200aa19804031fabe68cb468591c2611ecbcf",
+        "funding_vout": 3,
+        "amount_sats": 1004,
+        "status": "SWEPT",
+        "sweep_txid": "d08ca232bac6ca98e33a17a05971ce85e3b40d948165851cedf9e21d8aff6ac8",
+        "notes": "P2WSH two-factor normal path (user+service)",
+        "funded_at": "2025-10-28T13:44:16.969796",
+        "swept_at": "2025-10-28T13:45:09.985272"
+      }
+    ],
+    "p2wsh_recovery": [
+      {
+        "test_number": 5,
+        "created_at": "2025-10-28T13:42:17.169524",
+        "locktime": 275844,
+        "script_type": "cltv_twofactor_p2wsh",
+        "script_params": {
+          "locktime": 275844,
+          "user_pubkey": "03bf23c1542d16eab70b1051eaf832823cfc4c6f1dcdbafd81e37918e6f874ef8b",
+          "service_pubkey": "03186b483d056a033826ae73d88f732985c4ccb1f32ba35f4b4cc47fdcf04aa6eb",
+          "recovery_pubkey": "03079264c4b4bfcd7fe3a7b7b92b6c439f3a5b3abcd29189bf7b54d781ff03d722"
+        },
+        "current_height_at_creation": 275844,
+        "path": "recovery",
+        "script_hex": "632103186b483d056a033826ae73d88f732985c4ccb1f32ba35f4b4cc47fdcf04aa6ebad2103bf23c1542d16eab70b1051eaf832823cfc4c6f1dcdbafd81e37918e6f874ef8bac6703843504b1752103079264c4b4bfcd7fe3a7b7b92b6c439f3a5b3abcd29189bf7b54d781ff03d722ad2103bf23c1542d16eab70b1051eaf832823cfc4c6f1dcdbafd81e37918e6f874ef8bac68",
+        "user_pubkey": "03bf23c1542d16eab70b1051eaf832823cfc4c6f1dcdbafd81e37918e6f874ef8b",
+        "user_private_key_hex": "0000000000000000000000000000000000000000000000000000000000000040",
+        "service_pubkey": "03186b483d056a033826ae73d88f732985c4ccb1f32ba35f4b4cc47fdcf04aa6eb",
+        "service_private_key_hex": "0000000000000000000000000000000000000000000000000000000000000041",
+        "recovery_pubkey": "03079264c4b4bfcd7fe3a7b7b92b6c439f3a5b3abcd29189bf7b54d781ff03d722",
+        "recovery_private_key_hex": "0000000000000000000000000000000000000000000000000000000000000042",
+        "format": "P2WSH",
+        "address": "tb1qw259pt77pdw9wurrenw43q5djvc5r73cuzmh0rc2pdjtj83sflwqlt5exv",
+        "funding_txid": "e7209f13c6ad38eb01b0dd828b4200aa19804031fabe68cb468591c2611ecbcf",
+        "funding_vout": 4,
+        "amount_sats": 1005,
+        "status": "SWEPT",
+        "sweep_txid": "7e482348db83696a5e15a4d8979d7e6fcfc8b6b3c70a72bfdc64ab399092b674",
+        "notes": "P2WSH two-factor recovery path (user+recovery after timeout)",
+        "funded_at": "2025-10-28T13:44:16.969800",
+        "swept_at": "2025-10-28T13:45:13.139470"
+      }
+    ]
+  },
+  "cltv_payment_channel": {
+    "p2wsh_cooperative": [
+      {
+        "test_number": 6,
+        "created_at": "2025-10-28T13:42:18.141966",
+        "locktime": 275844,
+        "script_type": "cltv_payment_channel_p2wsh",
+        "script_params": {
+          "locktime": 275844,
+          "sender_pubkey": "033f0e80e574456d8f8fa64e044b2eb72ea22eb53fe1efe3a443933aca7f8cb0e3",
+          "receiver_pubkey": "03a1d0fcf2ec9de675b612136e5ce70d271c21417c9d2b8aaaac138599d0717940"
+        },
+        "current_height_at_creation": 275844,
+        "path": "cooperative",
+        "script_hex": "635221033f0e80e574456d8f8fa64e044b2eb72ea22eb53fe1efe3a443933aca7f8cb0e32103a1d0fcf2ec9de675b612136e5ce70d271c21417c9d2b8aaaac138599d071794052ae6703843504b17521033f0e80e574456d8f8fa64e044b2eb72ea22eb53fe1efe3a443933aca7f8cb0e3ac68",
+        "sender_pubkey": "033f0e80e574456d8f8fa64e044b2eb72ea22eb53fe1efe3a443933aca7f8cb0e3",
+        "sender_private_key_hex": "0000000000000000000000000000000000000000000000000000000000000060",
+        "receiver_pubkey": "03a1d0fcf2ec9de675b612136e5ce70d271c21417c9d2b8aaaac138599d0717940",
+        "receiver_private_key_hex": "0000000000000000000000000000000000000000000000000000000000000061",
+        "format": "P2WSH",
+        "address": "tb1qlms568l8kjaxr474daqv8d77tt080y3nf0ktkuz2peu76tz5azgs245pyd",
+        "funding_txid": "e7209f13c6ad38eb01b0dd828b4200aa19804031fabe68cb468591c2611ecbcf",
+        "funding_vout": 5,
+        "amount_sats": 1006,
+        "status": "SWEPT",
+        "sweep_txid": "b9fa3f429ccf757986a64a732b35a8d1a9f4aeba709389a758a62ea6fb66c0ca",
+        "notes": "P2WSH payment channel cooperative close (sender+receiver multisig)",
+        "funded_at": "2025-10-28T13:44:16.969804",
+        "swept_at": "2025-10-28T13:45:17.049496"
+      }
+    ],
+    "p2wsh_refund": [
+      {
+        "test_number": 7,
+        "created_at": "2025-10-28T13:42:19.147429",
+        "locktime": 275844,
+        "script_type": "cltv_payment_channel_p2wsh",
+        "script_params": {
+          "locktime": 275844,
+          "sender_pubkey": "033f0e80e574456d8f8fa64e044b2eb72ea22eb53fe1efe3a443933aca7f8cb0e3",
+          "receiver_pubkey": "03a1d0fcf2ec9de675b612136e5ce70d271c21417c9d2b8aaaac138599d0717940"
+        },
+        "current_height_at_creation": 275844,
+        "path": "refund",
+        "script_hex": "635221033f0e80e574456d8f8fa64e044b2eb72ea22eb53fe1efe3a443933aca7f8cb0e32103a1d0fcf2ec9de675b612136e5ce70d271c21417c9d2b8aaaac138599d071794052ae6703843504b17521033f0e80e574456d8f8fa64e044b2eb72ea22eb53fe1efe3a443933aca7f8cb0e3ac68",
+        "sender_pubkey": "033f0e80e574456d8f8fa64e044b2eb72ea22eb53fe1efe3a443933aca7f8cb0e3",
+        "sender_private_key_hex": "0000000000000000000000000000000000000000000000000000000000000060",
+        "receiver_pubkey": "03a1d0fcf2ec9de675b612136e5ce70d271c21417c9d2b8aaaac138599d0717940",
+        "receiver_private_key_hex": "0000000000000000000000000000000000000000000000000000000000000061",
+        "format": "P2WSH",
+        "address": "tb1qlms568l8kjaxr474daqv8d77tt080y3nf0ktkuz2peu76tz5azgs245pyd",
+        "funding_txid": "e7209f13c6ad38eb01b0dd828b4200aa19804031fabe68cb468591c2611ecbcf",
+        "funding_vout": 6,
+        "amount_sats": 1007,
+        "status": "SWEPT",
+        "sweep_txid": "f9df30b6c2a3eb8e55036b8f51da0b4e9399bebe78114b2e33ef72b3dcd2358b",
+        "notes": "P2WSH payment channel refund (sender only after timeout)",
+        "funded_at": "2025-10-28T13:44:16.969808",
+        "swept_at": "2025-10-28T13:45:20.334198"
+      }
+    ]
+  },
+  "cltv_data_publishing": {
+    "p2wsh_publisher": [
+      {
+        "test_number": 8,
+        "created_at": "2025-10-28T13:42:20.134600",
+        "locktime": 275844,
+        "script_type": "cltv_data_publishing_p2wsh",
+        "script_params": {
+          "locktime": 275844,
+          "data_hash": "eeaed29fcf9848d926c2c9060acd9ba9878a1f8e",
+          "publisher_pubkey": "0234ff3be4033f7a06696c3d09f7d1671cbcf55cd700535655647077456769a24e",
+          "buyer_pubkey": "035e95bb399a6971d376026947f89bde2f282b33810928be4ded112ac4d70e20d5"
+        },
+        "current_height_at_creation": 275844,
+        "path": "publisher",
+        "script_hex": "63a914eeaed29fcf9848d926c2c9060acd9ba9878a1f8e88210234ff3be4033f7a06696c3d09f7d1671cbcf55cd700535655647077456769a24eac6703843504b17521035e95bb399a6971d376026947f89bde2f282b33810928be4ded112ac4d70e20d5ac68",
+        "data_hash": "eeaed29fcf9848d926c2c9060acd9ba9878a1f8e",
+        "data_preimage": "536563726574204249502d36352064617461207075626c697368696e67206578616d706c65",
+        "publisher_pubkey": "0234ff3be4033f7a06696c3d09f7d1671cbcf55cd700535655647077456769a24e",
+        "publisher_private_key_hex": "0000000000000000000000000000000000000000000000000000000000000080",
+        "buyer_pubkey": "035e95bb399a6971d376026947f89bde2f282b33810928be4ded112ac4d70e20d5",
+        "buyer_private_key_hex": "0000000000000000000000000000000000000000000000000000000000000081",
+        "format": "P2WSH",
+        "address": "tb1q63j6ruuwtcdjxvdggwyhegryj77fmdpdvszcn72m3ykukkkg8q4sqer8zc",
+        "funding_txid": "e7209f13c6ad38eb01b0dd828b4200aa19804031fabe68cb468591c2611ecbcf",
+        "funding_vout": 7,
+        "amount_sats": 1008,
+        "status": "SWEPT",
+        "sweep_txid": "7172ee80b03c5d0f46820d0ae9f146bbb4ff73b1dc42238f8cbf025f6916ea0b",
+        "notes": "Publisher reveals preimage to claim funds",
+        "funded_at": "2025-10-28T13:44:16.969812",
+        "swept_at": "2025-10-28T13:45:23.550508"
+      }
+    ],
+    "p2wsh_buyer_refund": [
+      {
+        "test_number": 9,
+        "created_at": "2025-10-28T13:42:21.132225",
+        "locktime": 275844,
+        "script_type": "cltv_data_publishing_p2wsh",
+        "script_params": {
+          "locktime": 275844,
+          "data_hash": "eeaed29fcf9848d926c2c9060acd9ba9878a1f8e",
+          "publisher_pubkey": "0234ff3be4033f7a06696c3d09f7d1671cbcf55cd700535655647077456769a24e",
+          "buyer_pubkey": "035e95bb399a6971d376026947f89bde2f282b33810928be4ded112ac4d70e20d5"
+        },
+        "current_height_at_creation": 275844,
+        "path": "buyer_refund",
+        "script_hex": "63a914eeaed29fcf9848d926c2c9060acd9ba9878a1f8e88210234ff3be4033f7a06696c3d09f7d1671cbcf55cd700535655647077456769a24eac6703843504b17521035e95bb399a6971d376026947f89bde2f282b33810928be4ded112ac4d70e20d5ac68",
+        "data_hash": "eeaed29fcf9848d926c2c9060acd9ba9878a1f8e",
+        "data_preimage": "536563726574204249502d36352064617461207075626c697368696e67206578616d706c65",
+        "publisher_pubkey": "0234ff3be4033f7a06696c3d09f7d1671cbcf55cd700535655647077456769a24e",
+        "publisher_private_key_hex": "0000000000000000000000000000000000000000000000000000000000000080",
+        "buyer_pubkey": "035e95bb399a6971d376026947f89bde2f282b33810928be4ded112ac4d70e20d5",
+        "buyer_private_key_hex": "0000000000000000000000000000000000000000000000000000000000000081",
+        "format": "P2WSH",
+        "address": "tb1q63j6ruuwtcdjxvdggwyhegryj77fmdpdvszcn72m3ykukkkg8q4sqer8zc",
+        "funding_txid": "e7209f13c6ad38eb01b0dd828b4200aa19804031fabe68cb468591c2611ecbcf",
+        "funding_vout": 8,
+        "amount_sats": 1009,
+        "status": "SWEPT",
+        "sweep_txid": "82e97f9c0daa1499de35657e14a8ac2a7189ea8a6b3905ffd393b41b98b9e436",
+        "notes": "Buyer refunds after timeout (data not delivered)",
+        "funded_at": "2025-10-28T13:44:16.969816",
+        "swept_at": "2025-10-28T13:45:26.683019"
+      }
+    ]
+  }
+}
