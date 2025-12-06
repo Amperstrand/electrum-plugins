@@ -1400,6 +1400,6 @@ class Plugin(BasePlugin):
         except Exception as e:
             logger.info(f"[CLTV] [FUND] Error: {e}")
             import traceback
-            logger.info(f"[CLTV] {traceback.format_exc(}"))
+            logger.info(f"[CLTV] {traceback.format_exc()}")
             return {'success': False, 'error': str(e)}
     
