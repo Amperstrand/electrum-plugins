@@ -345,18 +345,6 @@ class CLTVAddressDialog(WindowModalDialog, QtEventListener):
 
         return {'text': status_text, 'color': status_color}
     
-    def get_current_height(self) -> int:
-        """Get current blockchain height from wallet network.
-        
-        Returns:
-            Current block height, or 0 if network unavailable.
-        """
-        if self.wallet and self.wallet.network:
-            try:
-                return self.wallet.network.get_local_height()
-            except Exception:
-                pass
-        return 0
     
     def add_horizontal_separator(self, layout):
         """Add a horizontal line separator to layout.
@@ -533,7 +521,7 @@ class CLTVAddressDialog(WindowModalDialog, QtEventListener):
         # Check locktime if applicable
         if kwargs.get('requires_locktime'):
             locktime = kwargs.get('locktime') or self.get_locktime()
-            current_height = self.get_current_height()
+            current_height = self.wallet.adb.get_local_height() if hasattr(self.wallet, 'adb') else 0
             
             if current_height < locktime:
                 blocks_remaining = locktime - current_height
@@ -1103,7 +1091,7 @@ class CLTVAddressDialog(WindowModalDialog, QtEventListener):
 
         # Locktime status - prominent display with Electrum colors
         locktime = params.get('locktime', 0)
-        current_height = self.get_current_height()
+        current_height = self.wallet.adb.get_local_height() if hasattr(self.wallet, 'adb') else 0
         is_locked = current_height < locktime
         blocks_remaining = max(0, locktime - current_height)
         logger.info(f"[DIALOG]   Locktime: {locktime}, current_height: {current_height}, is_locked: {is_locked}")
@@ -1117,7 +1105,8 @@ class CLTVAddressDialog(WindowModalDialog, QtEventListener):
         # Balance display - using Electrum's formatting pattern
         # Get balance for use in path buttons below
         logger.info(f"[DIALOG]   Getting balance...")
-        balance = self._get_balance_sats()
+        c, u, x = self.wallet.get_addr_balance(self.address)
+        balance = c + u + x
         logger.info(f"[DIALOG]   Balance: {balance} sats")
         
         # Store as instance variable for refresh_balance() to update
@@ -1329,13 +1318,6 @@ class CLTVAddressDialog(WindowModalDialog, QtEventListener):
         dialog.exec()
 
 
-    def _get_balance_sats(self, **kwargs) -> int:
-        """Get balance in satoshis from Electrum's wallet cache."""
-        try:
-            c, u, x = self.wallet.get_addr_balance(self.address)
-            return c + u + x
-        except Exception:
-            return 0
     
     def _update_balance_display(self, **kwargs):
         """Update the balance label with current balance from Electrum's cache."""
@@ -1343,7 +1325,8 @@ class CLTVAddressDialog(WindowModalDialog, QtEventListener):
             return
             
         try:
-            balance = self._get_balance_sats()
+            c, u, x = self.wallet.get_addr_balance(self.address)
+            balance = c + u + x
             
             # Handle zero balance cleanly (avoid "0. sat" display)
             if balance > 0:

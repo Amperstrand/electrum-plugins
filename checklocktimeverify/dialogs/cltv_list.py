@@ -182,8 +182,9 @@ class CLTVList(MyTreeView):
         else:
             balance_str = '0'
         
-        # Get UTXO count
-        utxo_count = self._get_utxo_count(address)
+        # Get UTXO count directly from Electrum's ADB
+        utxos = self.wallet.adb.get_addr_utxo(address) if hasattr(self.wallet, 'adb') else {}
+        utxo_count = len(utxos) if utxos else 0
         utxo_str = str(utxo_count)
         
         # Truncate address for display
@@ -236,15 +237,6 @@ class CLTVList(MyTreeView):
         
         return contract_name, output_type
     
-    def _get_utxo_count(self, address: str) -> int:
-        """Get UTXO count from Electrum's ADB."""
-        try:
-            if hasattr(self.wallet, 'adb'):
-                utxos = self.wallet.adb.get_addr_utxo(address)
-                return len(utxos) if utxos else 0
-        except Exception:
-            pass
-        return 0
     
     
     def on_double_click(self, idx):
