@@ -31,6 +31,9 @@ from electrum.gui.qt.util import (
     MONOSPACE_FONT, ColorScheme, read_QIcon
 )
 from electrum.gui.qt.my_treeview import MyTreeView
+import logging
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from electrum.gui.qt.main_window import ElectrumWindow
@@ -262,7 +265,7 @@ class CLTVList(MyTreeView):
                 break
         
         if not addr_data:
-            self.plugin.log_warning(f"[CLTVList] Address data not found for {address[:20]}...")
+            logger.warning(f"[CLTVList] Address data not found for {address[:20]}...")
             return
         
         try:
@@ -274,7 +277,7 @@ class CLTVList(MyTreeView):
             )
             dlg.exec()
         except Exception as e:
-            self.plugin.log_error(f"[CLTVList] Error opening dialog: {e}")
+            logger.error(f"[CLTVList] Error opening dialog: {e}")
     
     def create_menu(self, position):
         """Create right-click context menu."""
@@ -382,7 +385,7 @@ class CLTVList(MyTreeView):
                 self.plugin.remove_address(self.wallet, address)
                 self.update_rows.emit(self.wallet)
             except Exception as e:
-                self.plugin.log_error(f"[CLTVList] Error deleting contract: {e}")
+                logger.error(f"[CLTVList] Error deleting contract: {e}")
     
     @QtCore.pyqtSlot(Abstract_Wallet, str)
     def do_update_single_row(self, wallet: Abstract_Wallet, address: str):
@@ -403,7 +406,7 @@ class CLTVList(MyTreeView):
                         addr_data = data
                         break
             except Exception as e:
-                self.plugin.log_error(f"[CLTVList] Error loading address data: {e}")
+                logger.error(f"[CLTVList] Error loading address data: {e}")
         
         if not addr_data:
             # Fallback: try local cache
@@ -480,10 +483,10 @@ class CLTVList(MyTreeView):
         # Get current wallet from main_window (property ensures it's always fresh)
         current_wallet = self.wallet
         if not current_wallet:
-            self.plugin.log_debug("[CLTVList] do_update_rows: no wallet available")
+            logger.debug("[CLTVList] do_update_rows: no wallet available")
             return
         
-        self.plugin.log_debug(f"[CLTVList] do_update_rows: refreshing list for wallet {id(current_wallet)}")
+        logger.debug(f"[CLTVList] do_update_rows: refreshing list for wallet {id(current_wallet)}")
         
         self.model().clear()
         self.update_headers(self.headers)
@@ -493,7 +496,7 @@ class CLTVList(MyTreeView):
         try:
             self._addresses_cache = self.plugin.load_all_addresses(current_wallet)
         except Exception as e:
-            self.plugin.log_error(f"[CLTVList] Error loading addresses: {e}")
+            logger.error(f"[CLTVList] Error loading addresses: {e}")
             self._addresses_cache = []
         
         self.update_summary_label()
@@ -777,7 +780,7 @@ class CLTVList(MyTreeView):
             dialog.exec()
             
         except Exception as e:
-            self.plugin.log_error(f"[UNFUNDED] Error: {e}")
+            logger.error(f"[UNFUNDED] Error: {e}")
             self.main_window.show_error(_("Error showing unfunded addresses:\n{e}").format(e=e))
     
     def _show_settings(self):
@@ -818,5 +821,5 @@ class CLTVList(MyTreeView):
                         data['label'] = text
                         break
             except Exception as e:
-                self.plugin.log_error(f"[CLTVList] Error setting label: {e}")
+                logger.error(f"[CLTVList] Error setting label: {e}")
 

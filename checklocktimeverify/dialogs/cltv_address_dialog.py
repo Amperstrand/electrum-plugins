@@ -37,6 +37,9 @@ from electrum.gui.qt.util import (
 from electrum.gui.qt.history_list import HistoryList, HistoryModel
 from electrum.gui.qt.qrtextedit import ShowQRTextEdit
 from electrum.gui.qt.my_treeview import MyTreeView, MySortModel
+import logging
+
+logger = logging.getLogger(__name__)
 
 # Transaction building imports (used by _build_*_tx methods)
 from electrum.transaction import PartialTransaction, PartialTxInput, PartialTxOutput, TxOutpoint
@@ -292,7 +295,7 @@ class CLTVAddressDialog(WindowModalDialog, QtEventListener):
             try:
                 self.plugin._register_single_address_with_wallet(self.wallet, self.address)
             except Exception as e:
-                self.plugin.log_debug(f"[DIALOG] Failed to register address: {e}")
+                logger.debug(f"[DIALOG] Failed to register address: {e}")
         
         # Register for Qt event callbacks (QtEventListener pattern)
         self.register_callbacks()
@@ -561,13 +564,13 @@ class CLTVAddressDialog(WindowModalDialog, QtEventListener):
         try:
             contract_name, _ = parse_script_id(script_type)
         except ValueError:
-            self.plugin.log(f"[WARNING] ⚠️  Unknown script type: {script_type}")
+            logger.warning(f"[WARNING] ⚠️  Unknown script type: {script_type}")
             return {}
         
         # Get contract definition (single source of truth)
         contract = CONTRACTS.get(contract_name)
         if not contract:
-            self.plugin.log(f"[WARNING] ⚠️  Unknown contract: {contract_name}")
+            logger.warning(f"[WARNING] ⚠️  Unknown contract: {contract_name}")
             return {}
         
         # Extract parameters (v12.0.0 format: nested params dict)
@@ -581,9 +584,9 @@ class CLTVAddressDialog(WindowModalDialog, QtEventListener):
         missing = [p for p in required_params if params.get(p) is None]
         
         if missing:
-            self.plugin.log(f"[WARNING] ⚠️  Broken address: {self.address[:20]}...")
-            self.plugin.log(f"[WARNING] ⚠️  Missing required parameters: {', '.join(missing)}")
-            self.plugin.log(f"[WARNING] ⚠️  Cannot sweep - address must be recreated")
+            logger.warning(f"[WARNING] ⚠️  Broken address: {self.address[:20]}...")
+            logger.warning(f"[WARNING] ⚠️  Missing required parameters: {', '.join(missing)}")
+            logger.warning(f"[WARNING] ⚠️  Cannot sweep - address must be recreated")
         
         return params
     
@@ -718,7 +721,7 @@ class CLTVAddressDialog(WindowModalDialog, QtEventListener):
                         except Exception:
                             pass  # Skip transactions we can't parse
             except Exception as e:
-                self.plugin.log(f"[COINS] Error getting history: {e}")
+                logger.error(f"[COINS] Error getting history: {e}")
             
             # Sort by height (newest first)
             coins.sort(key=lambda c: c.get('height', 0), reverse=True)
@@ -757,7 +760,7 @@ class CLTVAddressDialog(WindowModalDialog, QtEventListener):
             # Signet/testnet may return lower estimates, but nodes reject < 1 sat/vbyte
             fee_rate_int = max(1, int(fee_rate))
             
-            self.plugin.log(f"[FEE] Dynamic fee rate: {fee_rate_int} sat/vbyte (from estimate: {fee_rate})")
+            logger.info(f"[FEE] Dynamic fee rate: {fee_rate_int} sat/vbyte (from estimate: {fee_rate})")
             return fee_rate_int
         
         except (AttributeError, TypeError):
@@ -765,10 +768,10 @@ class CLTVAddressDialog(WindowModalDialog, QtEventListener):
             try:
                 fee_kb = self.config.fee_per_kb()
                 fee_rate_int = max(1, int(fee_kb / 1000))
-                self.plugin.log(f"[FEE] Fee rate from fee_per_kb: {fee_rate_int} sat/vbyte")
+                logger.info(f"[FEE] Fee rate from fee_per_kb: {fee_rate_int} sat/vbyte")
                 return fee_rate_int
             except:
-                self.plugin.log(f"[FEE] Using fallback fee rate: 1 sat/vbyte")
+                logger.info(f"[FEE] Using fallback fee rate: 1 sat/vbyte")
                 return 1  # Final fallback
     
     # Old calculate_transaction_fee method removed - use FeeCalculator instead
@@ -871,12 +874,12 @@ class CLTVAddressDialog(WindowModalDialog, QtEventListener):
             output_amount: Output amount in satoshis
             tx_locktime: Transaction locktime (optional, only logged if provided)
         """
-        self.plugin.log(f"[{contract_type}] Building transaction ({path}):")
-        self.plugin.log(f"[{contract_type}]   Inputs: {num_utxos} UTXO(s) = {balance:,} sats")
-        self.plugin.log(f"[{contract_type}]   Fees: {total_fees:,} sats")
-        self.plugin.log(f"[{contract_type}]   Output: {output_amount:,} sats")
+        logger.info(f"[{contract_type}] Building transaction ({path}):")
+        logger.info(f"[{contract_type}]   Inputs: {num_utxos} UTXO(s) = {balance:,} sats")
+        logger.info(f"[{contract_type}]   Fees: {total_fees:,} sats")
+        logger.info(f"[{contract_type}]   Output: {output_amount:,} sats")
         if tx_locktime is not None:
-            self.plugin.log(f"[{contract_type}]   Locktime: {tx_locktime}")
+            logger.info(f"[{contract_type}]   Locktime: {tx_locktime}")
     
     def _show_transaction_preview(self, tx, title: str):
         """Show transaction in Electrum's native preview dialog.
@@ -925,11 +928,11 @@ class CLTVAddressDialog(WindowModalDialog, QtEventListener):
             if not dest_address:
                 # If no unused address, create a new one
                 dest_address = self.wallet.create_new_address(for_change=False)
-            self.plugin.log(f"[SWEEP] Destination: {dest_address}")
+            logger.info(f"[SWEEP] Destination: {dest_address}")
         except Exception as e:
             # Fallback to standard receiving address
             dest_address = self.wallet.get_receiving_address()
-            self.plugin.log(f"[SWEEP] Using default receiving address: {dest_address}")
+            logger.info(f"[SWEEP] Using default receiving address: {dest_address}")
         
         if not dest_address:
             self.show_error(_("Cannot sweep: wallet has no receiving addresses."))
@@ -950,7 +953,7 @@ class CLTVAddressDialog(WindowModalDialog, QtEventListener):
         # 5. Build transaction
         try:
             addr_type = self.addr_data.get('script_type', 'CLTV')
-            self.plugin.log(f"[{addr_type}] Building {path_name} tx for {self.address[:20]}...")
+            logger.info(f"[{addr_type}] Building {path_name} tx for {self.address[:20]}...")
             
             # Use unified builder (it will calculate fees internally)
             result = self._build_cltv_transaction(dest_address, path=path, fee_sats=None)
@@ -999,15 +1002,15 @@ class CLTVAddressDialog(WindowModalDialog, QtEventListener):
         
         # === Status + balance + coins + spending paths (all in one card) ===
         script_type = self.addr_data.get('script_type', 'unknown')
-        self.plugin.log(f"[DIALOG] Calling create_status_section() for {script_type}...")
+        logger.info(f"[DIALOG] Calling create_status_section() for {script_type}...")
         status_group = self.create_status_section()
-        self.plugin.log(f"[DIALOG] Status group returned: {type(status_group)}, is None: {status_group is None}")
+        logger.info(f"[DIALOG] Status group returned: {type(status_group)}, is None: {status_group is None}")
         if status_group:
-            self.plugin.log(f"[DIALOG] Adding status group to layout...")
+            logger.info(f"[DIALOG] Adding status group to layout...")
             layout.addWidget(status_group)
-            self.plugin.log(f"[DIALOG] Status group added to layout")
+            logger.info(f"[DIALOG] Status group added to layout")
         else:
-            self.plugin.log(f"[DIALOG] [ERROR] Status group is None, not adding to layout!")
+            logger.error(f"[DIALOG] [ERROR] Status group is None, not adding to layout!")
         
         # Add scroll area to main layout
         scroll.setWidget(content_widget)
@@ -1041,23 +1044,23 @@ class CLTVAddressDialog(WindowModalDialog, QtEventListener):
         Uses ContractDefinition as single source of truth - no special cases.
         Every contract type is handled identically through its definition.
         """
-        self.plugin.log(f"[DIALOG] create_status_section() starting...")
+        logger.info(f"[DIALOG] create_status_section() starting...")
         params = self.get_params()
         script_type = self.addr_data.get('script_type', '')
-        self.plugin.log(f"[DIALOG]   script_type: {script_type}")
-        self.plugin.log(f"[DIALOG]   params keys: {list(params.keys())}")
-        self.plugin.log(f"[DIALOG]   locktime: {params.get('locktime', 'NOT SET')}")
+        logger.info(f"[DIALOG]   script_type: {script_type}")
+        logger.info(f"[DIALOG]   params keys: {list(params.keys())}")
+        logger.info(f"[DIALOG]   locktime: {params.get('locktime', 'NOT SET')}")
 
         # Get contract definition - this MUST exist for all supported contracts
         contract = get_contract_for_script_type(script_type)
-        self.plugin.log(f"[DIALOG]   contract: {contract.name if contract else 'None'}")
+        logger.info(f"[DIALOG]   contract: {contract.name if contract else 'None'}")
         if not contract:
-            self.plugin.log(f"[DIALOG] [ERROR] No contract definition found!")
+            logger.error(f"[DIALOG] [ERROR] No contract definition found!")
             raise ValueError(f"No contract definition found for script_type: {script_type}. "
                            f"All contracts must be properly defined in CONTRACTS.")
 
-        self.plugin.log(f"[DIALOG]   contract.paths: {[p.name for p in contract.paths] if contract.paths else 'None'}")
-        self.plugin.log(f"[DIALOG]   contract.key_roles: {[k.name for k in contract.key_roles] if contract.key_roles else 'None'}")
+        logger.info(f"[DIALOG]   contract.paths: {[p.name for p in contract.paths] if contract.paths else 'None'}")
+        logger.info(f"[DIALOG]   contract.key_roles: {[k.name for k in contract.key_roles] if contract.key_roles else 'None'}")
 
         # Generate UI from ContractDefinition - single source of truth pattern
         return self._create_status_section_from_contract(contract, params)
@@ -1073,12 +1076,12 @@ class CLTVAddressDialog(WindowModalDialog, QtEventListener):
         
         Uses Electrum-native widgets and ColorScheme for consistent theming.
         """
-        self.plugin.log(f"[DIALOG] _create_status_section_from_contract() starting for {contract.name}...")
+        logger.info(f"[DIALOG] _create_status_section_from_contract() starting for {contract.name}...")
         from PyQt6.QtWidgets import QGroupBox, QVBoxLayout
         from electrum.i18n import _
 
         # Create the main group box with contract name - Electrum native style
-        self.plugin.log(f"[DIALOG]   Creating group box...")
+        logger.info(f"[DIALOG]   Creating group box...")
         group = QGroupBox(_(contract.name))
         layout = QVBoxLayout()
         layout.setSpacing(12)
@@ -1086,14 +1089,14 @@ class CLTVAddressDialog(WindowModalDialog, QtEventListener):
 
         # Contract description - using WWLabel for proper word wrapping
         if contract.short_description:
-            self.plugin.log(f"[DIALOG]   Adding description: {contract.short_description[:50]}...")
+            logger.info(f"[DIALOG]   Adding description: {contract.short_description[:50]}...")
             desc_label = WWLabel(_(contract.short_description))
             desc_label.setWordWrap(True)
             layout.addWidget(desc_label)
 
         # BIP reference if available - subtle styling
         if contract.bip_reference:
-            self.plugin.log(f"[DIALOG]   Adding BIP ref: {contract.bip_reference}")
+            logger.info(f"[DIALOG]   Adding BIP ref: {contract.bip_reference}")
             bip_label = WWLabel(f"<i>{_(contract.bip_reference)}</i>")
             bip_label.setStyleSheet(f"color: {ColorScheme.DEFAULT.as_color().name()}; font-size: 11px;")
             layout.addWidget(bip_label)
@@ -1103,25 +1106,25 @@ class CLTVAddressDialog(WindowModalDialog, QtEventListener):
         current_height = self.get_current_height()
         is_locked = current_height < locktime
         blocks_remaining = max(0, locktime - current_height)
-        self.plugin.log(f"[DIALOG]   Locktime: {locktime}, current_height: {current_height}, is_locked: {is_locked}")
+        logger.info(f"[DIALOG]   Locktime: {locktime}, current_height: {current_height}, is_locked: {is_locked}")
 
         locktime_status = self._format_locktime_status(locktime, is_locked, blocks_remaining)
-        self.plugin.log(f"[DIALOG]   Locktime status text: {locktime_status['text'][:80]}...")
+        logger.info(f"[DIALOG]   Locktime status text: {locktime_status['text'][:80]}...")
         locktime_label = RichLabel(locktime_status['text'])
         locktime_label.setStyleSheet(f"color: {locktime_status['color'].name()};")
         layout.addWidget(locktime_label)
 
         # Balance display - using Electrum's formatting pattern
         # Get balance for use in path buttons below
-        self.plugin.log(f"[DIALOG]   Getting balance...")
+        logger.info(f"[DIALOG]   Getting balance...")
         balance = self._get_balance_sats()
-        self.plugin.log(f"[DIALOG]   Balance: {balance} sats")
+        logger.info(f"[DIALOG]   Balance: {balance} sats")
         
         # Store as instance variable for refresh_balance() to update
         self.balance_label = WWLabel("")  # Will be populated by _update_balance_display
         layout.addWidget(self.balance_label)
         self._update_balance_display()
-        self.plugin.log(f"[DIALOG]   Balance label added")
+        logger.info(f"[DIALOG]   Balance label added")
         
         # Coins section - shows both spent and unspent coins
         # Uses Electrum's native MyTreeView pattern
@@ -1132,20 +1135,20 @@ class CLTVAddressDialog(WindowModalDialog, QtEventListener):
         layout.addWidget(self.coins_label)
         
         # Create coin list widget - will be populated by _refresh_coin_list
-        self.plugin.log(f"[DIALOG]   Creating coin list widget...")
+        logger.info(f"[DIALOG]   Creating coin list widget...")
         self.coin_list = CLTVCoinList(self.window, [], self.plugin)  # self.window is the main window (parent)
         self.coin_list.setMaximumHeight(150)
         layout.addWidget(self.coin_list)
         
         # Initial population
-        self.plugin.log(f"[DIALOG]   Refreshing coin list...")
+        logger.info(f"[DIALOG]   Refreshing coin list...")
         self._refresh_coin_list()
-        self.plugin.log(f"[DIALOG]   Coin list refreshed")
+        logger.info(f"[DIALOG]   Coin list refreshed")
 
         # Spending paths section - clean visual separation
-        self.plugin.log(f"[DIALOG]   contract.paths: {contract.paths}")
+        logger.info(f"[DIALOG]   contract.paths: {contract.paths}")
         if contract.paths:
-            self.plugin.log(f"[DIALOG]   Creating {len(contract.paths)} spending path(s)...")
+            logger.info(f"[DIALOG]   Creating {len(contract.paths)} spending path(s)...")
             self.add_horizontal_separator(layout)
             
             paths_label = WWLabel(f"<b>{_('Spending Paths')}:</b>")
@@ -1153,12 +1156,12 @@ class CLTVAddressDialog(WindowModalDialog, QtEventListener):
 
             # Generate UI for each path - mirrors e2e test pattern
             for i, path in enumerate(contract.paths):
-                self.plugin.log(f"[DIALOG]     Path {i}: {path.name} (requires_locktime={path.requires_locktime})")
+                logger.info(f"[DIALOG]     Path {i}: {path.name} (requires_locktime={path.requires_locktime})")
                 path_widget = self._create_path_button_from_definition(
                     path, params, balance, current_height
                 )
                 layout.addWidget(path_widget)
-                self.plugin.log(f"[DIALOG]     Path {i} widget added")
+                logger.info(f"[DIALOG]     Path {i} widget added")
 
         # Key information section - collapsible-style display
         if contract.key_roles:
@@ -1205,7 +1208,7 @@ class CLTVAddressDialog(WindowModalDialog, QtEventListener):
         - Details button (ℹ️) - shows miniscript, keys, technical info
         - Sweep button - executes the sweep
         """
-        self.plugin.log(f"[DIALOG] _create_path_button_from_definition() for '{path.name}'...")
+        logger.info(f"[DIALOG] _create_path_button_from_definition() for '{path.name}'...")
         from PyQt6.QtWidgets import QPushButton
         from electrum.i18n import _
 
@@ -1217,25 +1220,25 @@ class CLTVAddressDialog(WindowModalDialog, QtEventListener):
         # Path is available if it has funds AND (doesn't require locktime OR locktime is satisfied)
         is_available = has_funds and (not path.requires_locktime or locktime_satisfied)
 
-        self.plugin.log(f"[DIALOG]   has_funds={has_funds}, locktime={locktime}, locktime_satisfied={locktime_satisfied}")
-        self.plugin.log(f"[DIALOG]   is_available={is_available}")
+        logger.info(f"[DIALOG]   has_funds={has_funds}, locktime={locktime}, locktime_satisfied={locktime_satisfied}")
+        logger.info(f"[DIALOG]   is_available={is_available}")
 
         # Calculate blocks remaining for locktime-dependent paths
         blocks_remaining = 0
         if path.requires_locktime and current_height < locktime:
             blocks_remaining = locktime - current_height
-            self.plugin.log(f"[DIALOG]   blocks_remaining={blocks_remaining}")
+            logger.info(f"[DIALOG]   blocks_remaining={blocks_remaining}")
 
         # Create sweep button tooltip
         if not has_funds:
             sweep_tooltip = _("Address has no balance (0 sats). Cannot sweep empty address.")
-            self.plugin.log(f"[DIALOG]   Sweep disabled: no funds")
+            logger.info(f"[DIALOG]   Sweep disabled: no funds")
         elif not locktime_satisfied:
             sweep_tooltip = _("Timelock not yet reached") + f" ({blocks_remaining} {_('blocks remaining')})"
-            self.plugin.log(f"[DIALOG]   Sweep disabled: timelock not satisfied")
+            logger.info(f"[DIALOG]   Sweep disabled: timelock not satisfied")
         else:
             sweep_tooltip = _(path.description)
-            self.plugin.log(f"[DIALOG]   Sweep enabled: {path.description}")
+            logger.info(f"[DIALOG]   Sweep enabled: {path.description}")
 
         # Create the row frame - use Electrum's ColorScheme for theme-aware colors
         row = QFrame()
@@ -1358,7 +1361,7 @@ class CLTVAddressDialog(WindowModalDialog, QtEventListener):
             self.balance_label.setText(f"{_('Balance')}: <b>{balance_text}</b>")
             self.balance_label.setStyleSheet(f"color: {balance_color};")
         except Exception as e:
-            self.plugin.log(f"[DIALOG] Error updating balance display: {e}")
+            logger.error(f"[DIALOG] Error updating balance display: {e}")
     
     def _refresh_coin_list(self):
         """Refresh the coin list with current UTXO data.
@@ -1366,7 +1369,7 @@ class CLTVAddressDialog(WindowModalDialog, QtEventListener):
         Fetches UTXO data from cache and rebuilds the coin list widget.
         IMPORTANT: Never uses network fallback to prevent UI thread blocking.
         """
-        self.plugin.log(f"[DIALOG] _refresh_coin_list() starting...")
+        logger.info(f"[DIALOG] _refresh_coin_list() starting...")
         if not hasattr(self, 'coin_list') or self.coin_list is None:
             return
         if not hasattr(self, 'coins_label') or self.coins_label is None:
@@ -1374,7 +1377,7 @@ class CLTVAddressDialog(WindowModalDialog, QtEventListener):
             
         try:
             coins_data = self._get_all_coins()
-            self.plugin.log(f"[DIALOG] _refresh_coin_list: success={coins_data.get('success')}, coins_count={len(coins_data.get('coins', []))}, unspent={coins_data.get('unspent_count', 0)}, spent={coins_data.get('spent_count', 0)}")
+            logger.info(f"[DIALOG] _refresh_coin_list: success={coins_data.get('success')}, coins_count={len(coins_data.get('coins', []))}, unspent={coins_data.get('unspent_count', 0)}, spent={coins_data.get('spent_count', 0)}")
             
             if coins_data['success'] and coins_data['coins']:
                 coins = coins_data['coins']
@@ -1397,7 +1400,7 @@ class CLTVAddressDialog(WindowModalDialog, QtEventListener):
                 self.coin_list._populate()
                 
         except Exception as e:
-            self.plugin.log(f"[DIALOG] Error refreshing coin list: {e}")
+            logger.error(f"[DIALOG] Error refreshing coin list: {e}")
     
     def _execute_path_sweep(self, path: str):
         """Execute sweep for a given path (called by dynamically created buttons).
@@ -1407,7 +1410,7 @@ class CLTVAddressDialog(WindowModalDialog, QtEventListener):
         Args:
             path: The spending path name (e.g., 'normal', 'recovery', 'arbitration_alice')
         """
-        self.plugin.log(f"[DEBUG] _execute_path_sweep called with path={path!r}")
+        logger.debug(f"[DEBUG] _execute_path_sweep called with path={path!r}")
         
         # Get contract definition from single source of truth
         script_type = self.addr_data.get('script_type', 'cltv_hodl')
@@ -1432,7 +1435,7 @@ class CLTVAddressDialog(WindowModalDialog, QtEventListener):
         path_display = path_info.display_name
         path_name = f"{contract.name} - {path_display}"
         
-        self.plugin.log(f"[DEBUG] Path: {path_name}, requires_locktime={path_info.requires_locktime}")
+        logger.debug(f"[DEBUG] Path: {path_name}, requires_locktime={path_info.requires_locktime}")
         
         # Special handling for data publishing publisher path - show warning
         if contract_name == 'data_publishing' and path == 'publisher':
@@ -1491,11 +1494,11 @@ class CLTVAddressDialog(WindowModalDialog, QtEventListener):
             script_id = self._get_script_id()
             script_type = self.addr_data.get('script_type', 'cltv_hodl')
             
-            self.plugin.log(f"[BUILDER] ========================================")
-            self.plugin.log(f"[BUILDER] Building transaction for {script_id}")
-            self.plugin.log(f"[BUILDER] Script type: {script_type}")
-            self.plugin.log(f"[BUILDER] Path: {path}")
-            self.plugin.log(f"[BUILDER] Destination: {dest_address}")
+            logger.info(f"[BUILDER] ========================================")
+            logger.info(f"[BUILDER] Building transaction for {script_id}")
+            logger.info(f"[BUILDER] Script type: {script_type}")
+            logger.info(f"[BUILDER] Path: {path}")
+            logger.info(f"[BUILDER] Destination: {dest_address}")
             
             # Get contract definition from ContractDefinition (single source of truth)
             from ..cltv_lib.address_regenerator import parse_script_type
@@ -1513,7 +1516,7 @@ class CLTVAddressDialog(WindowModalDialog, QtEventListener):
                 valid_paths = [p.name for p in contract.paths]
                 return {'success': False, 'error': f'Invalid path "{path}" for {contract_name}. Valid: {valid_paths}'}
             
-            self.plugin.log(f"[BUILDER] Path config: requires_locktime={path_info.requires_locktime}")
+            logger.info(f"[BUILDER] Path config: requires_locktime={path_info.requires_locktime}")
             
             # Extract parameters
             params = self.get_params()
@@ -1537,7 +1540,7 @@ class CLTVAddressDialog(WindowModalDialog, QtEventListener):
             utxos = utxo_data['utxos']
             balance = utxo_data['balance']
             
-            self.plugin.log(f"[BUILDER] UTXOs: {len(utxos)}, Balance: {balance} sats")
+            logger.info(f"[BUILDER] UTXOs: {len(utxos)}, Balance: {balance} sats")
             
             # Determine transaction locktime first (needed for fee calculation)
             locktime_param = params.get('locktime')
@@ -1560,11 +1563,11 @@ class CLTVAddressDialog(WindowModalDialog, QtEventListener):
                 # User-provided fee override
                 total_fees = fee_sats
                 output_amount = balance - total_fees
-                self.plugin.log(f"[BUILDER] Using user-provided fee: {total_fees} sats")
+                logger.info(f"[BUILDER] Using user-provided fee: {total_fees} sats")
             else:
                 # Get fee rate
                 fee_rate = self.get_dynamic_fee_rate()
-                self.plugin.log(f"[BUILDER] Fee rate: {fee_rate} sat/vbyte")
+                logger.info(f"[BUILDER] Fee rate: {fee_rate} sat/vbyte")
                 
                 # Convert UTXOs to FeeCalculator format (txid/vout instead of tx_hash/tx_pos)
                 fee_calc_utxos = [
@@ -1599,8 +1602,8 @@ class CLTVAddressDialog(WindowModalDialog, QtEventListener):
                 estimated_vsize = fee_result['estimated_vsize']
                 actual_fee_rate = fee_result['fee_rate']
                 
-                self.plugin.log(f"[BUILDER] Estimated tx size: {estimated_vsize} vbytes (from Electrum)")
-                self.plugin.log(f"[BUILDER] Calculated fee: {total_fees} sats ({actual_fee_rate:.2f} sat/vbyte)")
+                logger.info(f"[BUILDER] Estimated tx size: {estimated_vsize} vbytes (from Electrum)")
+                logger.info(f"[BUILDER] Calculated fee: {total_fees} sats ({actual_fee_rate:.2f} sat/vbyte)")
                 
                 # Validate minimum relay fee
                 if actual_fee_rate < 1.0:
@@ -1642,10 +1645,10 @@ class CLTVAddressDialog(WindowModalDialog, QtEventListener):
             
             # If address is broken, block sweep with helpful error
             if broken_reasons:
-                self.plugin.log(f"[ERROR] ❌ Cannot sweep broken address")
+                logger.error(f"[ERROR] ❌ Cannot sweep broken address")
                 for reason in broken_reasons:
-                    self.plugin.log(f"[ERROR] ❌ {reason}")
-                self.plugin.log(f"[ERROR] ❌ This address was created before parameter storage fix")
+                    logger.error(f"[ERROR] ❌ {reason}")
+                logger.error(f"[ERROR] ❌ This address was created before parameter storage fix")
                 
                 reasons_text = '\n'.join(f'  • {r}' for r in broken_reasons)
                 return {
@@ -1689,7 +1692,7 @@ class CLTVAddressDialog(WindowModalDialog, QtEventListener):
             
             try:
                 sweeper = get_sweeper(script_id, **sweep_kwargs)
-                self.plugin.log(f"[BUILDER] Got sweeper from registry: {sweeper.__class__.__name__}")
+                logger.info(f"[BUILDER] Got sweeper from registry: {sweeper.__class__.__name__}")
             except Exception as e:
                 return {'success': False, 'error': f'Failed to get sweeper for {script_id}: {e}'}
             
@@ -1699,11 +1702,11 @@ class CLTVAddressDialog(WindowModalDialog, QtEventListener):
             params = self.get_params()
             
             # DEBUG: Log the full address record
-            self.plugin.log(f"[DEBUG] Address record from storage:")
-            self.plugin.log(f"[DEBUG]   address: {self.address}")
-            self.plugin.log(f"[DEBUG]   script_type: {script_type}")
-            self.plugin.log(f"[DEBUG]   params: {params}")
-            self.plugin.log(f"[DEBUG]   script_hex: {script_hex[:80]}..." if len(script_hex) > 80 else f"[DEBUG]   script_hex: {script_hex}")
+            logger.debug(f"[DEBUG] Address record from storage:")
+            logger.debug(f"[DEBUG]   address: {self.address}")
+            logger.debug(f"[DEBUG]   script_type: {script_type}")
+            logger.debug(f"[DEBUG]   params: {params}")
+            logger.debug(f"[DEBUG]   script_hex: {script_hex[:80]}..." if len(script_hex) > 80 else f"[DEBUG]   script_hex: {script_hex}")
             
             keys = {}
             
@@ -1714,7 +1717,7 @@ class CLTVAddressDialog(WindowModalDialog, QtEventListener):
             except ValueError:
                 contract_name = None
 
-            self.plugin.log(f"[DEBUG] script_type={script_type}, contract_name={contract_name}")
+            logger.debug(f"[DEBUG] script_type={script_type}, contract_name={contract_name}")
             
             # For simple CLTV (both P2WSH and Taproot), get the private key from wallet
             if contract_name == 'hodl':
@@ -1722,7 +1725,7 @@ class CLTVAddressDialog(WindowModalDialog, QtEventListener):
                 if not pubkey_hex:
                     return {'success': False, 'error': 'Missing pubkey in address parameters'}
                 
-                self.plugin.log(f"[DEBUG] Pubkey from params: {pubkey_hex}")
+                logger.debug(f"[DEBUG] Pubkey from params: {pubkey_hex}")
                 
                 # Get private key from wallet for this pubkey
                 try:
@@ -1743,7 +1746,7 @@ class CLTVAddressDialog(WindowModalDialog, QtEventListener):
                     if hasattr(keystore, 'get_private_key'):
                         # Try different derivation paths
                         key_source = params.get('key_source', {})
-                        self.plugin.log(f"[DEBUG] Key source: {key_source}")
+                        logger.debug(f"[DEBUG] Key source: {key_source}")
                         
                         # First check if this IS the test key pubkey
                         # Test key: secp256k1 generator point
@@ -1759,18 +1762,18 @@ class CLTVAddressDialog(WindowModalDialog, QtEventListener):
                                 # DEBUG: Log the test key being used
                                 if keys['pubkey']:
                                     test_pubkey = keys['pubkey'].get_public_key_hex()
-                                    self.plugin.log(f"[DEBUG] Using hardcoded test key from ContractDefinition")
-                                    self.plugin.log(f"[DEBUG] Test key pubkey: {test_pubkey}")
-                                    self.plugin.log(f"[DEBUG] Address pubkey:  {pubkey_hex}")
-                                    self.plugin.log(f"[DEBUG] Keys match: {test_pubkey.upper() == pubkey_hex.upper()}")
+                                    logger.debug(f"[DEBUG] Using hardcoded test key from ContractDefinition")
+                                    logger.debug(f"[DEBUG] Test key pubkey: {test_pubkey}")
+                                    logger.debug(f"[DEBUG] Address pubkey:  {pubkey_hex}")
+                                    logger.debug(f"[DEBUG] Keys match: {test_pubkey.upper() == pubkey_hex.upper()}")
                             except Exception as e:
-                                self.plugin.log(f"[WARNING] Failed to get test keys from ContractDefinition: {e}")
+                                logger.error(f"[WARNING] Failed to get test keys from ContractDefinition: {e}")
                                 keys['pubkey'] = get_test_privkey('hodl')
                             
-                            self.plugin.log(f"[{contract_name}] Using hardcoded test key (POC)")
+                            logger.info(f"[{contract_name}] Using hardcoded test key (POC)")
                         else:
                             # Try to find the key in the wallet by matching pubkey
-                            self.plugin.log(f"[KEY_LOOKUP] Searching for key with pubkey: {pubkey_hex}")
+                            logger.info(f"[KEY_LOOKUP] Searching for key with pubkey: {pubkey_hex}")
                             
                             # Get all addresses and their public keys
                             found_key = None
@@ -1779,25 +1782,25 @@ class CLTVAddressDialog(WindowModalDialog, QtEventListener):
                                     # Get the pubkey for this address
                                     wallet_pubkey = self.wallet.get_public_key(wallet_addr)
                                     if wallet_pubkey:
-                                        self.plugin.log(f"[KEY_LOOKUP] Checking {wallet_addr}: {wallet_pubkey}")
+                                        logger.info(f"[KEY_LOOKUP] Checking {wallet_addr}: {wallet_pubkey}")
                                         if wallet_pubkey.upper() == pubkey_hex.upper():
                                             # Found matching address - get its private key
-                                            self.plugin.log(f"[KEY_LOOKUP] ✓ Match found: {wallet_addr}")
+                                            logger.info(f"[KEY_LOOKUP] ✓ Match found: {wallet_addr}")
                                             # Get private key using Electrum's API
                                             wif_key = self.wallet.export_private_key(wallet_addr, password=None)
                                             from electrum.bitcoin import deserialize_privkey
                                             from electrum_ecc import ECPrivkey
                                             txin_type, privkey_bytes, compressed = deserialize_privkey(wif_key)
                                             found_key = ECPrivkey(privkey_bytes)
-                                            self.plugin.log(f"[KEY_LOOKUP] ✓ Private key retrieved")
+                                            logger.info(f"[KEY_LOOKUP] ✓ Private key retrieved")
                                             break
                                 except Exception as e:
-                                    self.plugin.log(f"[KEY_LOOKUP] Error checking {wallet_addr}: {e}")
+                                    logger.error(f"[KEY_LOOKUP] Error checking {wallet_addr}: {e}")
                                     continue
                             
                             if found_key:
                                 keys['pubkey'] = found_key
-                                self.plugin.log(f"[{contract_name}] Using wallet key")
+                                logger.info(f"[{contract_name}] Using wallet key")
                             else:
                                 return {'success': False, 'error': f'Could not find private key for pubkey {pubkey_hex[:16]}... in wallet'}
                     else:
@@ -1816,21 +1819,21 @@ class CLTVAddressDialog(WindowModalDialog, QtEventListener):
                     # SINGLE SOURCE OF TRUTH: Use ContractDefinition to get test keys
                     try:
                         keys_dict = self._get_test_keys_for_contract(contract_name, path)
-                        self.plugin.log(f"[{contract_name}] Using hardcoded test keys (POC)")
-                        self.plugin.log(f"[DEBUG] Keys loaded from ContractDefinition: {list(keys_dict.keys())}")
+                        logger.info(f"[{contract_name}] Using hardcoded test keys (POC)")
+                        logger.debug(f"[DEBUG] Keys loaded from ContractDefinition: {list(keys_dict.keys())}")
                         keys.update(keys_dict)
-                        self.plugin.log(f"[DEBUG] Keys for sweeper: {list(keys.keys())}")
+                        logger.debug(f"[DEBUG] Keys for sweeper: {list(keys.keys())}")
                     except Exception as e:
-                        self.plugin.log(f"[WARNING] Failed to get test keys from ContractDefinition: {e}")
+                        logger.error(f"[WARNING] Failed to get test keys from ContractDefinition: {e}")
                         keys.update(self._get_test_keys(key_names))
                 else:
                     return {'success': False, 'error': f'Unsupported script_id: {script_id}'}
             
             # Sweeper already created above using registry.get_sweeper() with path parameter
-            self.plugin.log(f"[BUILDER] Sweeper ready: {sweeper.__class__.__name__} (path={path})")
+            logger.info(f"[BUILDER] Sweeper ready: {sweeper.__class__.__name__} (path={path})")
             
             # Build inputs
-            self.plugin.log(f"[BUILDER] Building {len(utxos)} transaction inputs...")
+            logger.info(f"[BUILDER] Building {len(utxos)} transaction inputs...")
             tx_inputs = []
             for utxo in utxos:
                 prevout = TxOutpoint(txid=bytes.fromhex(utxo['tx_hash']), out_idx=utxo['tx_pos'])
@@ -1851,10 +1854,10 @@ class CLTVAddressDialog(WindowModalDialog, QtEventListener):
                         path_name=path,
                         params=params
                     )
-                    self.plugin.log(f"[BUILDER] Dynamic witness size: {witness_size} bytes (path: {path})")
+                    logger.info(f"[BUILDER] Dynamic witness size: {witness_size} bytes (path: {path})")
                 except Exception as e:
                     # Fallback: estimate from contract structure
-                    self.plugin.log(f"[BUILDER] ⚠️ Dynamic witness calculation failed: {e}, estimating from contract")
+                    logger.warning(f"[BUILDER] ⚠️ Dynamic witness calculation failed: {e}, estimating from contract")
                     from ..cltv_lib.registry import parse_script_id
                     from ..cltv_lib.contracts import CONTRACTS
                     try:
@@ -1895,11 +1898,11 @@ class CLTVAddressDialog(WindowModalDialog, QtEventListener):
                 tx_inputs.append(txin)
             
             # Build output (will be adjusted after estimating actual tx size)
-            self.plugin.log(f"[BUILDER] Creating initial output: {dest_address} = {output_amount} sats")
+            logger.info(f"[BUILDER] Creating initial output: {dest_address} = {output_amount} sats")
             tx_output = PartialTxOutput.from_address_and_value(dest_address, output_amount)
             
             # Create transaction (unsigned, for size estimation)
-            self.plugin.log(f"[BUILDER] Creating transaction with locktime={tx_locktime}")
+            logger.info(f"[BUILDER] Creating transaction with locktime={tx_locktime}")
             tx = PartialTransaction.from_io(tx_inputs, [tx_output], locktime=tx_locktime)
             tx.version = 2
             
@@ -1908,13 +1911,13 @@ class CLTVAddressDialog(WindowModalDialog, QtEventListener):
                 # Verify our estimate - since inputs have _is_native_segwit=True and witness_sizehint,
                 # this should match what FeeCalculator calculated
                 verify_vsize = tx.estimated_size()
-                self.plugin.log(f"[BUILDER] Verified tx size: {verify_vsize} vbytes (fee: {total_fees} sats, rate: {total_fees/verify_vsize:.2f} sat/vbyte)")
+                logger.info(f"[BUILDER] Verified tx size: {verify_vsize} vbytes (fee: {total_fees} sats, rate: {total_fees/verify_vsize:.2f} sat/vbyte)")
                 
                 # Sanity check: warn if estimates differ significantly
                 if hasattr(self, '_fee_calc_vsize') and abs(verify_vsize - self._fee_calc_vsize) > 5:
-                    self.plugin.log(f"[BUILDER] ⚠️ Size estimate mismatch: FeeCalculator={self._fee_calc_vsize}, actual={verify_vsize}")
+                    logger.warning(f"[BUILDER] ⚠️ Size estimate mismatch: FeeCalculator={self._fee_calc_vsize}, actual={verify_vsize}")
             
-            self.plugin.log(f"[{contract_name}] Signing {len(tx_inputs)} input(s)...")
+            logger.info(f"[{contract_name}] Signing {len(tx_inputs)} input(s)...")
             
             # CRITICAL: Sign inputs as they appear in the transaction after from_io()
             # Electrum may reorder inputs (BIP-69 lexicographic ordering)
@@ -1930,23 +1933,23 @@ class CLTVAddressDialog(WindowModalDialog, QtEventListener):
                 from ..cltv_lib.address_regenerator import regenerate_address_data
                 try:
                     taproot_addr_info = regenerate_address_data(script_type, params)
-                    self.plugin.log(f"[BUILDER] Recomputed {script_type} address data via regenerator")
+                    logger.info(f"[BUILDER] Recomputed {script_type} address data via regenerator")
                 except Exception as e:
-                    self.plugin.log(f"[BUILDER] ⚠️ Failed to regenerate Taproot address: {e}")
+                    logger.error(f"[BUILDER] ⚠️ Failed to regenerate Taproot address: {e}")
 
             for i, txin in enumerate(tx.inputs()):
-                self.plugin.log(f"[BUILDER] Signing input {i+1}/{len(tx.inputs())}...")
-                self.plugin.log(f"[BUILDER]   Input value: {txin._trusted_value_sats} sats")
-                self.plugin.log(f"[BUILDER]   Script type: {txin.script_type}")
+                logger.info(f"[BUILDER] Signing input {i+1}/{len(tx.inputs())}...")
+                logger.info(f"[BUILDER]   Input value: {txin._trusted_value_sats} sats")
+                logger.info(f"[BUILDER]   Script type: {txin.script_type}")
                 if hasattr(txin, 'witness_script') and txin.witness_script:
-                    self.plugin.log(f"[BUILDER]   Witness script: {txin.witness_script.hex()}")
-                self.plugin.log(f"[BUILDER]   nSequence: {hex(txin.nsequence)}")
-                self.plugin.log(f"[BUILDER]   Prevout: {txin.prevout.txid.hex()}:{txin.prevout.out_idx}")
+                    logger.info(f"[BUILDER]   Witness script: {txin.witness_script.hex()}")
+                logger.info(f"[BUILDER]   nSequence: {hex(txin.nsequence)}")
+                logger.info(f"[BUILDER]   Prevout: {txin.prevout.txid.hex()}:{txin.prevout.out_idx}")
                 
                 # Use script_type directly - it should already be in canonical format
                 # (e.g., cltv_hodl_p2wsh, cltv_escrow_taproot)
                 sweeper_script_type = script_type
-                self.plugin.log(f"[BUILDER] Using script_type: {sweeper_script_type}")
+                logger.info(f"[BUILDER] Using script_type: {sweeper_script_type}")
                 
                 # Build output dict FIRST (before sighash computation)
                 # This ensures the script used for sighash matches the script in the witness
@@ -1968,8 +1971,8 @@ class CLTVAddressDialog(WindowModalDialog, QtEventListener):
                     elif path == 'refund' and 'data_publishing' in script_type:
                         script_path = 'buyer_refund'
                     
-                    self.plugin.log(f"[BUILDER] Looking for script_path='{script_path}' in taproot_addr_info")
-                    self.plugin.log(f"[BUILDER] taproot_addr_info keys: {list(taproot_addr_info.keys())}")
+                    logger.info(f"[BUILDER] Looking for script_path='{script_path}' in taproot_addr_info")
+                    logger.info(f"[BUILDER] taproot_addr_info keys: {list(taproot_addr_info.keys())}")
                     
                     # Get leaf_index from path_info (single source of truth)
                     leaf_index = path_info.leaf_index if hasattr(path_info, 'leaf_index') else 0
@@ -1980,14 +1983,14 @@ class CLTVAddressDialog(WindowModalDialog, QtEventListener):
                     if 'leaf_scripts' in taproot_addr_info and leaf_key in taproot_addr_info['leaf_scripts']:
                         output['script_hex'] = taproot_addr_info['leaf_scripts'][leaf_key]
                         output['control_block_hex'] = taproot_addr_info['control_blocks'].get(leaf_key)
-                        self.plugin.log(f"[BUILDER] ✓ Using leaf_scripts['{leaf_key}'] for path '{path}'")
+                        logger.info(f"[BUILDER] ✓ Using leaf_scripts['{leaf_key}'] for path '{path}'")
                     else:
                         # Single-path contracts: use top-level control block and script
                         if 'control_block_hex' not in taproot_addr_info:
                             raise ValueError(f"Missing control_block_hex in taproot_addr_info for {script_type}")
                         output['control_block_hex'] = taproot_addr_info['control_block_hex']
                         output['script_hex'] = taproot_addr_info.get('script_hex')
-                        self.plugin.log(f"[BUILDER] ✓ Using top-level control_block_hex (single-path)")
+                        logger.info(f"[BUILDER] ✓ Using top-level control_block_hex (single-path)")
                     
                     if 'control_block_hex' not in output or not output['control_block_hex']:
                         raise ValueError(f"Failed to get control_block_hex for path '{script_path}' (original path: '{path}')")
@@ -1998,16 +2001,16 @@ class CLTVAddressDialog(WindowModalDialog, QtEventListener):
                     output['internal_key'] = taproot_addr_info['internal_key']
                     output['output_key'] = taproot_addr_info['output_key']
                     
-                    self.plugin.log(f"[BUILDER] ✓ Using Taproot data (control_block: {output['control_block_hex'][:32]}..., script: {output['script_hex'][:32]}...)")
+                    logger.info(f"[BUILDER] ✓ Using Taproot data (control_block: {output['control_block_hex'][:32]}..., script: {output['script_hex'][:32]}...)")
                 
                 # Add data_preimage for data publishing (all variants)
                 if 'data_publishing' in script_type and 'data_preimage' in params:
                     output['data_preimage'] = params['data_preimage']
-                    self.plugin.log(f"[BUILDER] Added data_preimage to output: {params['data_preimage'][:16]}...")
+                    logger.info(f"[BUILDER] Added data_preimage to output: {params['data_preimage'][:16]}...")
                 
                 # Compute sighash using sweeper (single source of truth)
                 # This ensures the script used for sighash matches the script in the witness
-                self.plugin.log(f"[BUILDER] Computing sighash using sweeper (single source of truth)...")
+                logger.info(f"[BUILDER] Computing sighash using sweeper (single source of truth)...")
                 try:
                     sighash = sweeper.compute_sighash(
                         tx=tx,
@@ -2015,10 +2018,10 @@ class CLTVAddressDialog(WindowModalDialog, QtEventListener):
                         output=output,
                         prevout_amount=txin._trusted_value_sats
                     )
-                    self.plugin.log(f"[BUILDER]   Sighash computed: {sighash.hex()}")
+                    logger.info(f"[BUILDER]   Sighash computed: {sighash.hex()}")
                 except Exception as e:
                     # Fallback to manual computation if sweeper method fails
-                    self.plugin.log(f"[BUILDER] ⚠️ Sweeper sighash computation failed: {e}, using fallback")
+                    logger.warning(f"[BUILDER] ⚠️ Sweeper sighash computation failed: {e}, using fallback")
                     import traceback
                     traceback.print_exc()
                     if 'taproot' in script_type.lower():
@@ -2039,18 +2042,18 @@ class CLTVAddressDialog(WindowModalDialog, QtEventListener):
                         preimage = tx.serialize_preimage(txin_index=i)
                         sighash = sha256d(preimage)
                 
-                self.plugin.log(f"[BUILDER] Calling sweeper.build_witness() with {len(keys)} keys...")
+                logger.info(f"[BUILDER] Calling sweeper.build_witness() with {len(keys)} keys...")
                 witness_items = sweeper.build_witness(output, keys, sighash)
-                self.plugin.log(f"[BUILDER] Witness built: {len(witness_items)} items")
+                logger.info(f"[BUILDER] Witness built: {len(witness_items)} items")
                 
                 # Log witness item details (handle both bytes and ints)
                 for idx, item in enumerate(witness_items):
                     if isinstance(item, int):
-                        self.plugin.log(f"[BUILDER]   Item {idx}: integer {item}")
+                        logger.info(f"[BUILDER]   Item {idx}: integer {item}")
                     elif idx == 0:
-                        self.plugin.log(f"[BUILDER]   Item {idx} (signature): {len(item)} bytes - {item.hex()[:80]}...")
+                        logger.info(f"[BUILDER]   Item {idx} (signature): {len(item)} bytes - {item.hex()[:80]}...")
                     else:
-                        self.plugin.log(f"[BUILDER]   Item {idx} (script/data): {len(item)} bytes")
+                        logger.info(f"[BUILDER]   Item {idx} (script/data): {len(item)} bytes")
                 
                 # Construct and attach witness
                 from electrum.bitcoin import construct_witness
@@ -2062,7 +2065,7 @@ class CLTVAddressDialog(WindowModalDialog, QtEventListener):
                 actual_tx_size = tx.estimated_size()
                 actual_fee_rate = total_fees / actual_tx_size
 
-                self.plugin.log_debug(f"[FEE] Actual tx size: {actual_tx_size} vbytes (estimate: {estimated_vsize}), fee: {total_fees} sats ({actual_fee_rate:.2f} sat/vbyte)")
+                logger.debug(f"[FEE] Actual tx size: {actual_tx_size} vbytes (estimate: {estimated_vsize}), fee: {total_fees} sats ({actual_fee_rate:.2f} sat/vbyte)")
 
                 # Track fee estimation accuracy for future improvements
                 calculator.record_transaction_accuracy(estimated_vsize, actual_tx_size)
@@ -2071,14 +2074,14 @@ class CLTVAddressDialog(WindowModalDialog, QtEventListener):
                 # If fee rate is too low, it's because our witness_sizehint was too small.
                 # The fee calculator adds a small buffer to prevent this.
                 if actual_fee_rate < 1.0:
-                    self.plugin.log(f"[BUILDER] ⚠️ WARNING: Fee rate {actual_fee_rate:.2f} < 1.0 sat/vbyte!")
-                    self.plugin.log(f"[BUILDER] ⚠️ Consider checking witness size calculation for '{script_type}' path '{path}'")
+                    logger.warning(f"[BUILDER] ⚠️ WARNING: Fee rate {actual_fee_rate:.2f} < 1.0 sat/vbyte!")
+                    logger.warning(f"[BUILDER] ⚠️ Consider checking witness size calculation for '{script_type}' path '{path}'")
             
-            self.plugin.log(f"[{contract_name}] ✅ Transaction built successfully")
+            logger.info(f"[{contract_name}] ✅ Transaction built successfully")
             return {'success': True, 'tx': tx}
             
         except Exception as e:
-            self.plugin.log(f"[BUILDER] Error building transaction: {e}")
+            logger.error(f"[BUILDER] Error building transaction: {e}")
             import traceback
             traceback.print_exc()
             return {'success': False, 'error': str(e)}
@@ -2154,7 +2157,7 @@ class CLTVAddressDialog(WindowModalDialog, QtEventListener):
             # NOTE: Balance/coin refresh is NOT done here - that's handled by wallet_updated event
             # This function only updates locktime status display
             
-            self.plugin.log_debug(f"[NETWORK] Updated CLTV status: height={current_height}, locktime={locktime}, locked={is_locked}")
+            logger.debug(f"[NETWORK] Updated CLTV status: height={current_height}, locktime={locktime}, locked={is_locked}")
             
         except Exception as e:
-            self.plugin.log(f"[NETWORK] Error refreshing status: {e}")
+            logger.error(f"[NETWORK] Error refreshing status: {e}")

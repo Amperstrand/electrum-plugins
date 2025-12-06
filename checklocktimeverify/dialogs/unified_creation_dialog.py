@@ -34,6 +34,9 @@ from electrum.gui.qt.util import (
 from electrum.gui.qt.locktimeedit import LockTimeEdit
 from electrum.gui.qt.qrtextedit import ShowQRTextEdit
 from electrum.bitcoin import bfh
+import logging
+
+logger = logging.getLogger(__name__)
 
 from ..cltv_lib.contracts import (
     ContractDefinition, ContractType, ParamSpec, CONTRACTS
@@ -497,10 +500,12 @@ class UnifiedCreationDialog(WindowModalDialog):
             )
             
         except Exception as e:
-            self.plugin.log(f"[CLTV] Error creating address: {e}")
+            # Critical error - log with full traceback and show to user
+            logger.error(f"[CLTV] CRITICAL: Failed to create address: {e}")
             import traceback
-            traceback.print_exc()
+            logger.error(f"[CLTV] Traceback:\n{traceback.format_exc()}")
             self.show_error(_("Failed to create address: ") + str(e))
+            # Exception is logged and shown to user - no need to re-raise in GUI context
     
     def _build_address(self, params: Dict[str, Any], witness_version: int, network_type: str) -> Dict[str, Any]:
         """
@@ -538,46 +543,47 @@ class UnifiedCreationDialog(WindowModalDialog):
     
     def _save_to_storage(self, addr_info: Dict[str, Any], params: Dict[str, Any], 
                         script_type: str, witness_version: int):
-        """Save address to plugin storage."""
-        if not self.plugin:
-            return
+        """Save address to plugin storage.
         
-        try:
-            self.plugin.log(f"[CLTV] Saving address: {addr_info['address']}")
-            self.plugin.log(f"[CLTV] Script type: {script_type}")
-            
-            # Prepare storage data
-            storage_data = {
-                'script_hex': addr_info['script_hex'],
-                'script_type': script_type,
-                'witness_version': witness_version,
-                'params': params,
-                'output_type': 'taproot' if witness_version == 1 else 'p2wsh',
-            }
-            
-            # Add Taproot-specific fields
-            if witness_version == 1:
-                if 'internal_key' in addr_info:
-                    storage_data['internal_key'] = addr_info['internal_key']
-                if 'output_key' in addr_info:
-                    storage_data['output_key'] = addr_info['output_key']
-                if 'control_block' in addr_info:
-                    storage_data['control_block'] = addr_info['control_block']
-            
-            self.plugin.save_timelock_data(
-                address=addr_info['address'],
-                wallet=self.wallet,
-                **storage_data
-            )
-            
-            self.plugin.log(f"[CLTV] ✓ Address saved successfully")
-            
-            # UI will refresh automatically via Electrum's hooks when address is detected
-            
-        except Exception as e:
-            self.plugin.log(f"[CLTV] Failed to save address: {e}")
-            import traceback
-            traceback.print_exc()
+        Raises:
+            RuntimeError: If plugin is not available
+            ValueError: If required parameters are missing
+            RuntimeError: If storage write fails
+        """
+        if not self.plugin:
+            raise RuntimeError("Plugin not available - cannot save address")
+        
+        logger.info(f"[CLTV] Saving address: {addr_info['address']}")
+        logger.info(f"[CLTV] Script type: {script_type}")
+        
+        # Prepare storage data
+        storage_data = {
+            'script_hex': addr_info['script_hex'],
+            'script_type': script_type,
+            'witness_version': witness_version,
+            'params': params,
+            'output_type': 'taproot' if witness_version == 1 else 'p2wsh',
+        }
+        
+        # Add Taproot-specific fields
+        if witness_version == 1:
+            if 'internal_key' in addr_info:
+                storage_data['internal_key'] = addr_info['internal_key']
+            if 'output_key' in addr_info:
+                storage_data['output_key'] = addr_info['output_key']
+            if 'control_block' in addr_info:
+                storage_data['control_block'] = addr_info['control_block']
+        
+        # save_timelock_data now raises exceptions instead of returning False
+        self.plugin.save_timelock_data(
+            address=addr_info['address'],
+            wallet=self.wallet,
+            **storage_data
+        )
+        
+        logger.info(f"[CLTV] ✓ Address saved successfully")
+        
+        # UI will refresh automatically via Electrum's hooks when address is detected
 
 
 __all__ = ['UnifiedCreationDialog']
