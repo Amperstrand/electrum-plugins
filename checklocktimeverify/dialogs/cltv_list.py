@@ -108,9 +108,6 @@ class CLTVList(MyTreeView):
         # Don't store wallet - always get it from main_window to avoid stale references
         self.setSortingEnabled(True)
         self.setAlternatingRowColors(True)
-        
-        # Cache for addresses data (loaded from plugin storage)
-        self._addresses_cache = []
     
     def get_toolbar_buttons(self):
         """Return toolbar buttons for the CLTV tab (Electrum pattern)."""
@@ -249,12 +246,17 @@ class CLTVList(MyTreeView):
         """Open the contract details dialog for an address."""
         from .cltv_address_dialog import CLTVAddressDialog
         
-        # Find address data
+        # Find address data from plugin cache
         addr_data = None
-        for data in self._addresses_cache:
-            if data.get('address') == address:
-                addr_data = data
-                break
+        if self.plugin:
+            try:
+                all_addresses = self.plugin.load_all_addresses(self.wallet, use_cache=True)
+                for data in all_addresses:
+                    if data.get('address') == address:
+                        addr_data = data
+                        break
+            except Exception as e:
+                logger.error(f"[CLTVList] Error loading address data: {e}")
         
         if not addr_data:
             logger.warning(f"[CLTVList] Address data not found for {address[:20]}...")
@@ -301,10 +303,15 @@ class CLTVList(MyTreeView):
         
         # Find address data for status checks
         addr_data = None
-        for data in self._addresses_cache:
-            if data.get('address') == address:
-                addr_data = data
-                break
+        if self.plugin:
+            try:
+                all_addresses = self.plugin.load_all_addresses(self.wallet, use_cache=True)
+                for data in all_addresses:
+                    if data.get('address') == address:
+                        addr_data = data
+                        break
+            except Exception as e:
+                logger.error(f"[CLTVList] Error loading address data: {e}")
         
         params = addr_data.get('params', {}) if addr_data else {}
         locktime = params.get('locktime', 0)
@@ -401,13 +408,6 @@ class CLTVList(MyTreeView):
                 logger.error(f"[CLTVList] Error loading address data: {e}")
         
         if not addr_data:
-            # Fallback: try local cache
-            for data in self._addresses_cache:
-                if data.get('address') == address:
-                    addr_data = data
-                    break
-        
-        if not addr_data:
             # Address not found - do full refresh to be safe
             self.do_update_rows(wallet)
             return
@@ -432,10 +432,6 @@ class CLTVList(MyTreeView):
             self._update_row_styling(addr_data, items)
         else:
             # New address - add it to the list
-            # Update local cache
-            if addr_data not in self._addresses_cache:
-                self._addresses_cache.append(addr_data)
-            
             # Add new row
             field_map = self.format_fields(addr_data)
             items = [QStandardItem(field_map[col]) for col in sorted(field_map)]
@@ -484,16 +480,16 @@ class CLTVList(MyTreeView):
         self.update_headers(self.headers)
         self.set_visibility_of_columns()
         
-        # Load addresses from plugin
+        # Load addresses from plugin (uses plugin's cache)
         try:
-            self._addresses_cache = self.plugin.load_all_addresses(current_wallet)
+            addresses = self.plugin.load_all_addresses(current_wallet, use_cache=True)
         except Exception as e:
             logger.error(f"[CLTVList] Error loading addresses: {e}")
-            self._addresses_cache = []
+            addresses = []
         
-        self.update_summary_label()
+        self.update_summary_label(addresses)
         
-        for addr_data in self._addresses_cache:
+        for addr_data in addresses:
             field_map = self.format_fields(addr_data)
             items = [QStandardItem(field_map[col]) for col in sorted(field_map)]
             self.set_editability(items)
@@ -547,15 +543,22 @@ class CLTVList(MyTreeView):
             status_item.setBackground(self._default_item_bg_brush)
             balance_item.setBackground(self._default_item_bg_brush)
     
-    def update_summary_label(self):
+    def update_summary_label(self, addresses=None):
         """Update the summary label in toolbar."""
         if not hasattr(self, 'summary_label'):
             return
         
-        total_contracts = len(self._addresses_cache)
+        # Get addresses from plugin if not provided
+        if addresses is None:
+            try:
+                addresses = self.plugin.load_all_addresses(self.wallet, use_cache=True) if self.plugin else []
+            except Exception:
+                addresses = []
+        
+        total_contracts = len(addresses)
         total_balance = sum(
             sum(self.wallet.get_addr_balance(d.get('address', ''))) 
-            for d in self._addresses_cache
+            for d in addresses
         )
         
         msg = _('Contracts') + f': {total_contracts}'
@@ -611,7 +614,13 @@ class CLTVList(MyTreeView):
         sweepable = []
         current_height = self.wallet.adb.get_local_height()
         
-        for addr_data in self._addresses_cache:
+        # Get addresses from plugin cache
+        try:
+            addresses = self.plugin.load_all_addresses(self.wallet, use_cache=True) if self.plugin else []
+        except Exception:
+            addresses = []
+        
+        for addr_data in addresses:
             address = addr_data.get('address', '')
             params = addr_data.get('params', {})
             locktime = params.get('locktime', 0)
@@ -807,11 +816,8 @@ class CLTVList(MyTreeView):
         if address and text is not None:
             try:
                 self.plugin.set_address_label(self.wallet, address, text)
-                # Update cache
-                for data in self._addresses_cache:
-                    if data.get('address') == address:
-                        data['label'] = text
-                        break
+                # Invalidate plugin cache to force refresh on next load
+                self.plugin.invalidate_address_cache(self.wallet)
             except Exception as e:
                 logger.error(f"[CLTVList] Error setting label: {e}")
 
