@@ -30,6 +30,7 @@ class ContractType(Enum):
     TWOFACTOR = "twofactor"
     DATA_PUBLISHING = "data_publishing"
     TRIDENT_VAULT = "trident_vault"
+    DECAYING_MULTISIG = "decaying_multisig"
 
 
 @dataclass
@@ -279,41 +280,79 @@ class ContractDefinition:
 # CONTRACT DEFINITIONS
 # =============================================================================
 # 
-# Contracts are now defined in individual files:
-# - hodl.py
-# - payment_channel.py
-# - escrow.py
-# - twofactor.py
-# - data_publishing.py
+# Contracts are dynamically loaded from individual files in this directory.
+# Each contract file should define a ContractDefinition instance with a name
+# matching the pattern: <CONTRACT_NAME> = ContractDefinition(...)
 #
-# Import them here to maintain the CONTRACTS registry.
+# The registry automatically discovers and loads all contracts.
 # =============================================================================
 
-from .hodl import HODL
-from .payment_channel import PAYMENT_CHANNEL
-from .escrow import ESCROW
-from .twofactor import TWOFACTOR
-from .data_publishing import DATA_PUBLISHING
+import importlib
+import pkgutil
+from pathlib import Path
+import logging
 
-# Note: TRIDENT_VAULT is disabled (uses relative timelocks/CSV, not CLTV)
-# See comment in CONTRACTS registry below.
+logger = logging.getLogger(__name__)
 
-
-# =============================================================================
-# REGISTRY
-# =============================================================================
-
-CONTRACTS: Dict[str, ContractDefinition] = {
-    'hodl': HODL,
-    'payment_channel': PAYMENT_CHANNEL,
-    'escrow': ESCROW,
-    'twofactor': TWOFACTOR,
-    'data_publishing': DATA_PUBLISHING,
-    # DISABLED: Trident Vault uses relative timelocks (CSV/BIP-112) which require
-    # a larger refactoring of the codebase. All other contracts use absolute
-    # timelocks (CLTV/BIP-65). See docs/TIMELOCK_REFACTORING_PLAN.md for details.
-    # 'trident_vault': TRIDENT_VAULT,
+# Contracts to exclude from auto-loading
+EXCLUDED_CONTRACTS = {
+    'trident_vault',  # Uses relative timelocks (CSV/BIP-112), not CLTV
 }
+
+def _discover_contracts() -> Dict[str, ContractDefinition]:
+    """
+    Dynamically discover and load all contract definitions from this package.
+    
+    Scans the contracts directory for Python files and imports ContractDefinition
+    instances that match the pattern: <CONTRACT_NAME> = ContractDefinition(...)
+    
+    Returns:
+        Dictionary mapping contract names to ContractDefinition instances
+    """
+    contracts = {}
+    package_path = Path(__file__).parent
+    
+    # Get all Python files in the contracts directory
+    for module_info in pkgutil.iter_modules([str(package_path)]):
+        module_name = module_info.name
+        
+        # Skip non-contract files
+        if module_name in ('__init__', 'definitions'):
+            continue
+        
+        # Skip excluded contracts
+        if module_name in EXCLUDED_CONTRACTS:
+            logger.debug(f"Skipping excluded contract: {module_name}")
+            continue
+        
+        try:
+            # Import the module using absolute import path
+            full_module_path = f'{__package__}.{module_name}'
+            module = importlib.import_module(full_module_path)
+            
+            # Look for ContractDefinition instances (uppercase constants)
+            for attr_name in dir(module):
+                if attr_name.startswith('_'):
+                    continue
+                
+                attr = getattr(module, attr_name)
+                if isinstance(attr, ContractDefinition):
+                    # Use contract_type value as the key
+                    contract_name = attr.contract_type.value
+                    contracts[contract_name] = attr
+                    logger.debug(f"Loaded contract: {contract_name} from {module_name}")
+                    break
+            else:
+                logger.warning(f"No ContractDefinition found in {module_name}")
+                
+        except Exception as e:
+            logger.error(f"Failed to load contract from {module_name}: {e}", exc_info=True)
+    
+    return contracts
+
+
+# Dynamically load all contracts
+CONTRACTS: Dict[str, ContractDefinition] = _discover_contracts()
 
 
 # =============================================================================
