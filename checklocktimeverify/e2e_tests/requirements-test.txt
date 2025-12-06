@@ -1,0 +1,15 @@
+# Test dependencies for CLTV E2E tests
+
+# Core testing framework
+pytest>=7.4.0
+pytest-timeout>=2.1.0
+
+# Optional: for better output formatting
+pytest-html>=3.2.0
+pytest-json-report>=1.5.0
+
+# Optional: for parallel test execution
+pytest-xdist>=3.3.0
+
+# Optional: for coverage reporting
+pytest-cov>=4.1.0

@@ -42,12 +42,9 @@ def _wrap_address(script: bytes, output_type: str) -> Tuple[str, dict]:
         return address, {}
         
     elif output_type == 'taproot':
-        import taproot
-        # Extract locktime and pubkey from script to call taproot function
-        # For now, return error - caller should use taproot directly
         # Taproot creation requires direct use of taproot module
         # This function is for P2SH wrapping only
-        return "Taproot creation not supported through _wrap_address. Use taproot module directly.", {}
+        raise ValueError('Taproot creation not supported through _wrap_address. Use taproot module directly or handle taproot in the calling function.')
         
     else:
         raise ValueError(f'Unknown output type: {output_type}. Use "p2sh" or "taproot".')

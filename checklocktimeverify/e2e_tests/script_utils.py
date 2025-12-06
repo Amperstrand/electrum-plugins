@@ -22,15 +22,15 @@ from enum import Enum
 # ============================================================================
 
 class ScriptFormat(str, Enum):
-    """Supported Bitcoin script formats (Taproot removed - see taproot_tx_builder.py)"""
+    """Supported Bitcoin script formats"""
     P2WSH = "p2wsh"         # Native SegWit: tb1q... addresses
-    # TAPROOT removed October 28, 2025 - use taproot_tx_builder.py for taproot
+    TAPROOT = "taproot"     # Taproot: tb1p... addresses
 
 
 class SignatureType(Enum):
     """Bitcoin signature algorithms"""
     ECDSA = "ecdsa"         # Traditional, used in P2SH and P2WSH
-    # SCHNORR removed with taproot support
+    SCHNORR = "schnorr"     # BIP-340, used in Taproot
 
 
 # Format characteristics
@@ -39,6 +39,13 @@ FORMAT_INFO = {
         'prefix': 'bc1q',           # Mainnet: bc1q, Testnet: tb1q
         'pubkey_bytes': 33,         # Compressed pubkey
         'signature': SignatureType.ECDSA,
+        'witness': True,            # Native witness
+        'hash_func': 'sha256',      # SHA256 only
+    },
+    ScriptFormat.TAPROOT: {
+        'prefix': 'bc1p',           # Mainnet: bc1p, Testnet: tb1p
+        'pubkey_bytes': 32,         # X-only pubkey
+        'signature': SignatureType.SCHNORR,
         'witness': True,            # Native witness
         'hash_func': 'sha256',      # SHA256 only
     },
@@ -60,15 +67,12 @@ def validate_script_type(script_type: str) -> None:
         ValueError: If script_type is unknown
     
     Examples:
-        >>> validate_script_type("cltv_simple_p2sh")  # OK
+        >>> validate_script_type("cltv_hodl_p2wsh")  # OK
         >>> validate_script_type("invalid")  # Raises ValueError
     """
-    valid_types = [
-        'cltv_simple_p2wsh',
-        'cltv_simple_taproot',
-        'cltv_escrow_p2wsh',
-        'cltv_escrow_taproot',
-    ]
+    # Use registry as single source of truth for valid script types
+    from cltv_lib.registry import list_scripts
+    valid_types = list_scripts()
     
     if script_type not in valid_types:
         raise ValueError(
@@ -203,7 +207,7 @@ def detect_format(script_type: str) -> ScriptFormat:
     Detect script format from type string.
     
     Args:
-        script_type: String like "cltv_simple_hodl", "cltv_taproot", "cltv_p2wsh"
+        script_type: String like "cltv_hodl", "cltv_taproot", "cltv_p2wsh"
     
     Returns:
         ScriptFormat enum
@@ -448,20 +452,20 @@ def normalize_script_type(base_type: str, format: ScriptFormat) -> str:
     Generate normalized script type string.
     
     Args:
-        base_type: Base script type (e.g., "cltv_simple_hodl", "cltv_escrow_timeout")
+        base_type: Base script type (e.g., "cltv_hodl", "cltv_escrow_timeout")
         format: Target format
     
     Returns:
         Normalized type string
     
     Examples:
-        >>> normalize_script_type("cltv_simple_hodl", ScriptFormat.P2SH)
-        'cltv_simple_hodl'
+        >>> normalize_script_type("cltv_hodl", ScriptFormat.P2SH)
+        'cltv_hodl'
         
-        >>> normalize_script_type("cltv_simple_hodl", ScriptFormat.P2WSH)
-        'cltv_simple_hodl_p2wsh'
+        >>> normalize_script_type("cltv_hodl", ScriptFormat.P2WSH)
+        'cltv_hodl_p2wsh'
         
-        >>> normalize_script_type("cltv_simple_hodl", ScriptFormat.TAPROOT)
+        >>> normalize_script_type("cltv_hodl", ScriptFormat.TAPROOT)
         'cltv_taproot'
     """
     # Remove existing format suffixes
@@ -473,7 +477,7 @@ def normalize_script_type(base_type: str, format: ScriptFormat) -> str:
         return f"{base}_p2wsh"
     elif format == ScriptFormat.TAPROOT:
         # Special case: taproot uses different naming convention
-        if 'simple_hodl' in base:
+        if 'hodl' in base:
             return 'cltv_taproot'
         else:
             return f"{base}_taproot"

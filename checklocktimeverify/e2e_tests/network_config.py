@@ -11,7 +11,7 @@ from electrum.constants import BitcoinTestnet4, BitcoinSignet
 # ============================================================================
 
 # Options: 'testnet4' or 'signet'
-NETWORK = 'signet'
+NETWORK = 'signet'  # Default to signet (change to 'testnet4' if needed)
 
 # ============================================================================
 # Network Constants (auto-configured based on NETWORK)

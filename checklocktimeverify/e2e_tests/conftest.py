@@ -35,12 +35,34 @@ def pytest_addoption(parser):
         default=False,
         help="Automatically fund unfunded test addresses via Electrum"
     )
+    parser.addoption(
+        "--locktime",
+        type=int,
+        default=None,
+        help="Static locktime height to use for all tests (default: 1, immediately spendable)"
+    )
+    parser.addoption(
+        "--fundsize",
+        type=int,
+        default=500,
+        help="Base fund size in satoshis to use for tests (amount = fundsize + test_number)"
+    )
 
 
 def pytest_configure(config):
     """Configure pytest with custom settings"""
+    # Expose fund size to test modules via environment for easy access
+    try:
+        fundsize = config.getoption("--fundsize")
+    except Exception:
+        fundsize = 500
+    os.environ["E2E_FUND_BASE"] = str(fundsize)
+
     config.addinivalue_line(
         "markers", "slow: marks tests as slow (deselect with '-m \"not slow\"')"
+    )
+    config.addinivalue_line(
+        "markers", "fast: marks tests as fast (quick smoke tests)"
     )
     config.addinivalue_line(
         "markers", "p2wsh: marks P2WSH-specific tests"
@@ -51,7 +73,59 @@ def pytest_configure(config):
     config.addinivalue_line(
         "markers", "integration: marks integration tests requiring external services"
     )
+    config.addinivalue_line(
+        "markers", "negative: marks negative tests (expected failures)"
+    )
+    config.addinivalue_line(
+        "markers", "edge_case: marks edge case tests (boundary conditions)"
+    )
 
+
+@pytest.fixture(scope="session")
+def locktime_value(pytestconfig):
+    """
+    Get locktime from --locktime CLI option, or compute current_height + 1 as default.
+    
+    All tests now use current_height + 1 as the locktime, ensuring tests can run
+    immediately after funding (or after waiting 1 block).
+    """
+    locktime = pytestconfig.getoption("--locktime")
+    if locktime is None:
+        # Compute current_height + 1 directly (can't use current_height fixture due to scope)
+        try:
+            import subprocess
+            from pathlib import Path
+            from network_config import NETWORK_FLAG
+            
+            electrum_path = Path.home() / "src/electrum/run_electrum"
+            electrum_python = Path.home() / "src/electrum/venv/bin/python3"
+            
+            result = subprocess.run(
+                [str(electrum_python), str(electrum_path), NETWORK_FLAG, "getinfo"],
+                capture_output=True,
+                text=True,
+                timeout=10
+            )
+            
+            if result.returncode == 0:
+                import json
+                info = json.loads(result.stdout)
+                current_height = info.get('blockchain_height', 100000)
+                locktime = current_height + 1
+                print(f"\n🔒 Locktime not specified, using: current_height + 1 = {locktime}")
+            else:
+                locktime = 100001  # Default fallback
+                print(f"\n🔒 Locktime not specified, using default: {locktime}")
+        except Exception as e:
+            locktime = 100001  # Default fallback
+            print(f"\n🔒 Locktime not specified, using default: {locktime} (error: {e})")
+    else:
+        print(f"\n🔒 Locktime set via --locktime: {locktime}")
+    
+    print(f"   → All tests use locktime: {locktime}")
+    print(f"   → State file: test_state_{locktime}.json")
+    
+    return locktime
 
 @pytest.fixture(scope="session", autouse=True)
 def auto_fund_addresses(pytestconfig):
@@ -59,7 +133,7 @@ def auto_fund_addresses(pytestconfig):
     Automatically fund all CREATED addresses in a single batch transaction.
     
     This fixture runs AFTER all tests complete (via yield, then teardown).
-    It checks test_state.json for any addresses with status='CREATED' and
+    It checks test_state_{locktime}.json for any addresses with status='CREATED' and
     funds them all in one paytomany transaction using Electrum daemon.
     
     Enable with: pytest --fund
@@ -69,6 +143,7 @@ def auto_fund_addresses(pytestconfig):
     - All tests funded simultaneously
     - Automatic - creates and broadcasts transaction via Electrum
     - Idempotent - only funds addresses that need it
+    - GENERIC: Works with ANY category structure (no hardcoded categories)
     """
     # Yield first to let all tests run and create addresses
     yield
@@ -81,146 +156,73 @@ def auto_fund_addresses(pytestconfig):
     if not auto_fund_enabled:
         return
     
-    # Look for state file in parent directory (where tests create it)
-    state_file = Path(__file__).parent.parent / 'test_state.json'
-    
-    if not state_file.exists():
-        print("\n💡 No state file found - no addresses to fund")
+    # Get locktime from CLI option
+    locktime = pytestconfig.getoption("--locktime")
+    if locktime is None:
+        print("\n⚠️  Cannot auto-fund: --locktime not specified")
         return
     
-    # Load state and find unfunded addresses
-    state = StateManager()
+    state = StateManager(locktime=locktime)
     unfunded_addresses = []
     
-    # Check Simple CLTV
-    for variant, tests in state.state.get('cltv_simple', {}).items():
-        for test in tests:
-            if test.get('status') == 'CREATED':
-                tnum = test.get('test_number')
-                unfunded_addresses.append({
-                    'address': test['address'],
-                    'category': 'cltv_simple',
-                    'variant': variant,
-                    'type': f'Simple CLTV {variant.upper()}',
-                    'test_number': tnum,
-                    'amount_sats': 1000 + (tnum or 0)
-                })
-    
-    # Check Escrow
-    for variant, tests in state.state.get('cltv_escrow', {}).items():
-        for test in tests:
-            if test.get('status') == 'CREATED':
-                path = 'Cooperation' if 'cooperation' in variant else 'Refund'
-                fmt = variant.split('_')[0].upper()
-                tnum = test.get('test_number')
-                unfunded_addresses.append({
-                    'address': test['address'],
-                    'category': 'cltv_escrow',
-                    'variant': variant,
-                    'type': f'Escrow {fmt} {path}',
-                    'test_number': tnum,
-                    'amount_sats': 1000 + (tnum or 0)
-                })
-    
-    # Check Two-Factor
-    for variant, tests in state.state.get('cltv_twofactor', {}).items():
-        for test in tests:
-            if test.get('status') == 'CREATED':
-                path = 'Normal' if 'normal' in variant else 'Recovery'
-                fmt = variant.split('_')[0].upper()
-                tnum = test.get('test_number')
-                unfunded_addresses.append({
-                    'address': test['address'],
-                    'category': 'cltv_twofactor',
-                    'variant': variant,
-                    'type': f'Two-Factor {fmt} {path}',
-                    'test_number': tnum,
-                    'amount_sats': 1000 + (tnum or 0)
-                })
-    
-    # Check Payment Channel
-    for variant, tests in state.state.get('cltv_payment_channel', {}).items():
-        for test in tests:
-            if test.get('status') == 'CREATED':
-                path = 'Cooperative' if 'cooperative' in variant else 'Refund'
-                fmt = variant.split('_')[0].upper()
-                tnum = test.get('test_number')
-                unfunded_addresses.append({
-                    'address': test['address'],
-                    'category': 'cltv_payment_channel',
-                    'variant': variant,
-                    'type': f'Payment Channel {fmt} {path}',
-                    'test_number': tnum,
-                    'amount_sats': 1000 + (tnum or 0)
-                })
-    
-    # Check Data Publishing
-    for variant, tests in state.state.get('cltv_data_publishing', {}).items():
-        for test in tests:
-            if test.get('status') == 'CREATED':
-                path = 'Publisher' if 'publisher' in variant else 'Buyer Refund'
-                fmt = variant.split('_')[0].upper()
-                tnum = test.get('test_number')
-                unfunded_addresses.append({
-                    'address': test['address'],
-                    'category': 'cltv_data_publishing',
-                    'variant': variant,
-                    'type': f'Data Publishing {fmt} {path}',
-                    'test_number': tnum,
-                    'amount_sats': 1000 + (tnum or 0)
-                })
-    
-    # Check Taproot Escrow
-    for variant, tests in state.state.get('escrow', {}).items():
-        for test in tests:
-            if test.get('status') == 'CREATED':
-                if 'normal' in variant:
-                    path = 'Normal (Alice+Bob)'
-                elif 'arbitration' in variant:
-                    co_signer = test.get('co_signer', 'alice').capitalize()
-                    path = f'Arbitration (Lenny+{co_signer})'
-                else:
-                    path = variant
-                unfunded_addresses.append({
-                    'address': test['address'],
-                    'category': 'escrow',
-                    'variant': variant,
-                    'type': f'Taproot Escrow {path}',
-                    'amount_sats': test.get('amount_sats', 1000)
-                })
+    # GENERIC: Iterate over ALL categories in state that start with 'cltv_'
+    # This works with the new parametrized tests without hardcoding category names
+    for category, variants in state.state.items():
+        if not category.startswith('cltv_') or not isinstance(variants, dict):
+            continue
+        
+        for variant, tests in variants.items():
+            if not isinstance(tests, list):
+                continue
+            
+            for test in tests:
+                if test.get('status') == 'CREATED' and not test.get('funding_txid'):
+                    # Extract test info
+                    tnum = test.get('test_number', 0)
+                    path = test.get('path', 'sweep')
+                    amount_sats = test.get('amount_sats', 1000 + tnum)
+                    
+                    # Create display name from category and path
+                    contract_name = category.replace('cltv_', '').replace('_', ' ').title()
+                    type_str = f"{contract_name} {variant.upper()} ({path})"
+                    
+                    unfunded_addresses.append({
+                        'address': test['address'],
+                        'category': category,
+                        'variant': variant,
+                        'type': type_str,
+                        'test_number': tnum,
+                        'amount_sats': amount_sats,
+                        'path': path,
+                    })
     
     if not unfunded_addresses:
         print("\n✅ All addresses already funded or no addresses created yet")
         return
+    
+    # Sort by test number for consistent ordering
+    unfunded_addresses.sort(key=lambda x: x.get('test_number', 0))
     
     # Display what we're funding
     print(f"\n{'='*80}")
     print(f"💰 BATCH FUNDING: {len(unfunded_addresses)} tests need funding")
     print(f"{'='*80}\n")
     
-    amount_per_address_btc = 0.00001  # 1,000 satoshis
-    amount_per_address_sats = 1000
-    
     for i, addr_info in enumerate(unfunded_addresses, 1):
-        print(f"   {i}. {addr_info['type']:28} → {addr_info['address']}")
+        print(f"  #{addr_info['test_number']:2d}. {addr_info['type']:40}")
+        print(f"       {addr_info['address']}")
+        print(f"       Amount: {addr_info['amount_sats']} sats")
     
-    # Calculate total with unique amounts (1000, 1001, 1002, ..., 1000+N-1)
-    total_sats = sum(1000 + i for i in range(len(unfunded_addresses)))
+    total_sats = sum(addr['amount_sats'] for addr in unfunded_addresses)
     
     print(f"\n{'='*80}")
-    print(f"📋 CREATING BATCH TRANSACTION WITH UNIQUE AMOUNTS")
-    print(f"{'='*80}\n")
-    print(f"Total to send: {total_sats:,} satoshis")
-    print(f"Unique amounts per test: 1001, 1002, ..., 1020 sats")
-    print(f"Plus fees: ~200-500 sats\n")
+    print(f"📋 FUNDING SUMMARY")
+    print(f"{'='*80}")
+    print(f"   Tests to fund: {len(unfunded_addresses)}")
+    print(f"   Total amount: {total_sats:,} satoshis ({total_sats / 100_000_000:.8f} BTC)")
+    print(f"   Plus fees: ~200-500 sats\n")
     
     try:
-        # Use Electrum daemon RPC (reliable and works consistently)
-        print(f"   Using Electrum daemon RPC...")
-        
-        import subprocess
-        import json
-        
         electrum_path = Path.home() / "src/electrum/run_electrum"
         electrum_python = Path.home() / "src/electrum/venv/bin/python3"
         
@@ -240,34 +242,19 @@ def auto_fund_addresses(pytestconfig):
             raise RuntimeError(f"Daemon not running. Start with: electrum {NETWORK_FLAG} daemon -d")
         
         daemon_info = json.loads(result.stdout)
-        daemon_network = daemon_info.get('network', 'unknown')
-        print(f"   ✅ Daemon confirmed on {daemon_network}")
+        print(f"   ✅ Daemon confirmed on {daemon_info.get('network', 'unknown')}")
         
-        # Build outputs with unique amounts based on test_number
-        # IMPORTANT: Amount = 1000 + test_number for ALL tests (P2WSH and Taproot)
-        # This makes it easy to identify which UTXO belongs to which test
-        # CRITICAL: We create ONE output per test, even if multiple tests share the same address!
-        #           Tests sharing an address will use different UTXOs (identified by amount)
+        # Build outputs: each test gets unique address + unique amount
         outputs_list = []
         for addr_info in unfunded_addresses:
             addr = addr_info['address']
-            # Each test gets its own UTXO with unique amount = 1000 + test_number
-            tnum = addr_info.get('test_number', 0)
-            amount_sats = addr_info.get('amount_sats', 1000 + (tnum or 0))
-            outputs_list.append([addr, amount_sats / 100_000_000])
+            amount_btc = addr_info['amount_sats'] / 100_000_000
+            outputs_list.append([addr, amount_btc])
         
-        # Format for paytomany: [[addr, amount_btc], ...]
-        outputs = outputs_list
-        paytomany_json = json.dumps(outputs)
+        paytomany_json = json.dumps(outputs_list)
         
-        # Check if auto-funding is enabled
-        if not auto_fund_enabled:
-            print(f"\n💡 Auto-funding disabled. To fund addresses automatically, run:")
-            print(f"   pytest --fund")
-            return
-        
-        # Create transaction using daemon RPC
-        print(f"   Creating batch transaction with {len(outputs)} outputs...")
+        # Create transaction
+        print(f"   Creating batch transaction with {len(outputs_list)} outputs...")
         
         result = subprocess.run(
             [str(electrum_python), str(electrum_path), NETWORK_FLAG, "paytomany", paytomany_json],
@@ -290,14 +277,14 @@ def auto_fund_addresses(pytestconfig):
             [str(electrum_python), str(electrum_path), NETWORK_FLAG, "broadcast", tx_hex],
             capture_output=True,
             text=True,
-            timeout=30
+            timeout=60
         )
         
         if result.returncode != 0:
             print(f"   ❌ Broadcast failed: {result.stderr}")
             return
         
-        # Parse TXID from broadcast output
+        # Parse TXID
         broadcast_output = result.stdout.strip()
         try:
             broadcast_result = json.loads(broadcast_output)
@@ -305,7 +292,6 @@ def auto_fund_addresses(pytestconfig):
                 success, txid = broadcast_result
                 if not success:
                     print(f"   ❌ Broadcast returned false: {txid}")
-                    yield
                     return
             elif isinstance(broadcast_result, str):
                 txid = broadcast_result
@@ -322,11 +308,20 @@ def auto_fund_addresses(pytestconfig):
         print(f"   TXID: {txid}")
         print(f"   Verify: {EXPLORER_BASE}/tx/{txid}")
         
-        # Parse transaction to map outputs by amount
-        # Since we know each test has unique amount (1000 + test_number), we can map by amount
-        print(f"\n   Mapping outputs to tests by amount...")
+        # Map outputs to vout indices using UTXO offset (vout index)
+        # CRITICAL: paytomany preserves output order, so vout index = position in outputs_list
+        # This is more reliable than amount matching (which fails if amounts aren't unique)
+        print(f"\n   Mapping outputs to tests (using UTXO offset)...")
         
-        # Get raw transaction hex
+        # Build address+amount -> vout mapping from the original outputs_list order
+        # This is the most reliable method since paytomany preserves order
+        addr_amount_to_vout = {}
+        for vout_idx, addr_info in enumerate(unfunded_addresses):
+            addr = addr_info['address']
+            amount = addr_info['amount_sats']
+            addr_amount_to_vout[(addr, amount)] = vout_idx
+        
+        # Verify mapping by deserializing transaction (optional verification)
         result = subprocess.run(
             [str(electrum_python), str(electrum_path), NETWORK_FLAG, "gettransaction", txid],
             capture_output=True,
@@ -334,12 +329,10 @@ def auto_fund_addresses(pytestconfig):
             timeout=10
         )
         
-        amount_to_vout = {}  # Maps amount_sats -> vout
+        verification_failed = []
         if result.returncode == 0:
-            # gettransaction returns raw hex, need to deserialize it
             tx_hex = result.stdout.strip()
             
-            # Now deserialize the hex
             deserialize_result = subprocess.run(
                 [str(electrum_python), str(electrum_path), NETWORK_FLAG, "deserialize", tx_hex],
                 capture_output=True,
@@ -347,61 +340,64 @@ def auto_fund_addresses(pytestconfig):
                 timeout=10
             )
             
-            if deserialize_result.returncode != 0:
-                print(f"   ⚠️  Could not deserialize transaction")
-                amount_to_vout = {}
-            else:
+            if deserialize_result.returncode == 0:
                 tx_data = json.loads(deserialize_result.stdout)
-            
                 if 'outputs' in tx_data:
+                    # Verify each output matches our expected mapping
                     for vout_idx, output in enumerate(tx_data['outputs']):
-                        # Get amount in sats (deserialize returns value_sats)
-                        amount_sats = output.get('value_sats', 0)
-                        amount_to_vout[amount_sats] = vout_idx
-                        # Pretty-print known test ranges when applicable
-                        if 1000 <= amount_sats <= 2000:
-                            test_num = amount_sats - 1000
-                            test_type = "P2WSH" if test_num <= 9 else "Taproot"
-                            print(f"     VOUT {vout_idx}: {amount_sats} sats → Test #{test_num} ({test_type})")
-        else:
-            print(f"   ⚠️  Could not get transaction")
+                        output_addr = output.get('address', '')
+                        output_amount = output.get('value_sats', 0)
+                        
+                        # Find which test this should belong to
+                        expected_test = None
+                        for addr_info in unfunded_addresses:
+                            if addr_info['address'] == output_addr and addr_info['amount_sats'] == output_amount:
+                                expected_test = addr_info
+                                break
+                        
+                        if expected_test and vout_idx != addr_amount_to_vout.get((output_addr, output_amount)):
+                            verification_failed.append((vout_idx, output_addr, output_amount))
         
-        # Update state with vout numbers and amounts
-        # Each test gets its own UTXO identified by unique amount (1000 + test_number)
+        if verification_failed:
+            print(f"   ⚠️  WARNING: {len(verification_failed)} outputs don't match expected order")
+        
+        # Update state with funding info using UTXO offset (vout index)
         updated_count = 0
         for addr_info in unfunded_addresses:
             category = addr_info['category']
             variant = addr_info['variant']
-            tnum = addr_info.get('test_number', 0)
-            # Calculate expected amount: 1000 + test_number for all tests
-            expected_amount = addr_info.get('amount_sats', 1000 + (tnum or 0))
+            tnum = addr_info['test_number']
+            addr = addr_info['address']
+            expected_amount = addr_info['amount_sats']
             
-            actual_vout = amount_to_vout.get(expected_amount)
+            # Get vout index from our mapping (UTXO offset)
+            actual_vout = addr_amount_to_vout.get((addr, expected_amount))
             
             if actual_vout is None:
-                print(f"   ⚠️  Warning: Could not find UTXO with {expected_amount} sats for test #{tnum}")
+                print(f"   ⚠️  Test #{tnum}: Could not find vout for {addr[:20]}... ({expected_amount} sats)")
                 continue
             
-            # Update test state
-            test = state.state[category][variant][0] if state.state[category][variant] else {}
-            test['funding_txid'] = txid
-            test['funding_vout'] = actual_vout
-            test['amount_sats'] = expected_amount
-            test['status'] = 'FUNDED'
-            test['funded_at'] = datetime.now().isoformat()
-            
-            print(f"   ✅ Test {tnum}: {addr_info['type']} → vout {actual_vout}, {expected_amount} sats")
-            updated_count += 1
+            # Find and update the test in state
+            tests = state.state.get(category, {}).get(variant, [])
+            for test in tests:
+                if test.get('test_number') == tnum:
+                    # Verify address matches (safety check)
+                    if test.get('address') != addr:
+                        print(f"   ⚠️  Test #{tnum}: Address mismatch! Expected {addr}, got {test.get('address')}")
+                    
+                    test['funding_txid'] = txid
+                    test['funding_vout'] = actual_vout
+                    test['status'] = 'FUNDED'
+                    test['funded_at'] = datetime.now().isoformat()
+                    updated_count += 1
+                    print(f"   ✅ Test #{tnum}: vout={actual_vout} (UTXO offset), {expected_amount} sats, {addr[:20]}...")
+                    break
         
-        # Save state after all updates
         state.save()
         
-        if updated_count != len(unfunded_addresses):
-            print(f"   ⚠️  Warning: Only updated {updated_count}/{len(unfunded_addresses)} tests")
-        
-        print(f"\n🎉 All {updated_count} tests funded in ONE transaction!")
+        print(f"\n🎉 {updated_count}/{len(unfunded_addresses)} tests funded!")
         print(f"   Network: {NETWORK_NAME}")
-        print(f"   Ready to sweep!")
+        print(f"   Run tests again to sweep after locktime passes")
         
         return
     
@@ -540,109 +536,62 @@ from electrum_ecc import ECPrivkey
 # Using well-known test vectors so we never lose keys on testnet4
 # These are NOT SECURE - only use on testnet/signet!
 
-TEST_KEYS = {
-    # Simple CLTV test keys (one per format)
-    # Note: P2SH support removed - only P2WSH and Taproot are supported
-    'simple_p2wsh': {
-        'private_key_hex': '0000000000000000000000000000000000000000000000000000000000000002',
-        'description': 'Simple CLTV P2WSH test key'
-    },
-    'simple_taproot': {
-        'private_key_hex': '0000000000000000000000000000000000000000000000000000000000000003',
-        'description': 'Simple CLTV Taproot test key'
-    },
+# ============================================================================
+# TEST KEYS - Import from central test_keys.py
+# ============================================================================
+# All tests now use the same keys as the UI dialogs
+# This ensures consistency and simplifies the codebase
+
+# Add parent dir to path for test_keys import
+PARENT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if PARENT_DIR not in sys.path:
+    sys.path.insert(0, PARENT_DIR)
+
+from test_keys import get_test_keypair as _central_get_keypair, get_test_pubkey, get_test_privkey, TEST_KEYS as CENTRAL_TEST_KEYS
+
+# Map old format-specific key IDs to central key names
+# This provides backward compatibility while using central keys
+KEY_ID_MAP = {
+    # Simple CLTV - uses 'hodl' key for all formats
+    'simple_p2wsh': 'hodl',
+    'simple_taproot': 'hodl',
     
-    # Escrow test keys (alice/bob/lenny triplets for each format)
-    # Note: P2SH support removed - only P2WSH and Taproot are supported
-    'escrow_p2wsh_alice': {
-        'private_key_hex': '0000000000000000000000000000000000000000000000000000000000000020',
-        'description': 'Escrow P2WSH Alice key'
-    },
-    'escrow_p2wsh_bob': {
-        'private_key_hex': '0000000000000000000000000000000000000000000000000000000000000021',
-        'description': 'Escrow P2WSH Bob key'
-    },
-    'escrow_p2wsh_lenny': {
-        'private_key_hex': '0000000000000000000000000000000000000000000000000000000000000022',
-        'description': 'Escrow P2WSH Lenny (lawyer/arbitrator) key'
-    },
-    'escrow_taproot_alice': {
-        'private_key_hex': '0000000000000000000000000000000000000000000000000000000000000030',
-        'description': 'Escrow Taproot Alice key'
-    },
-    'escrow_taproot_bob': {
-        'private_key_hex': '0000000000000000000000000000000000000000000000000000000000000031',
-        'description': 'Escrow Taproot Bob key'
-    },
-    'escrow_taproot_lenny': {
-        'private_key_hex': '0000000000000000000000000000000000000000000000000000000000000032',
-        'description': 'Escrow Taproot Lenny (lawyer/arbitrator) key'
-    },
-    # Two-Factor Wallet Keys
-    'twofactor_p2wsh_user': {
-        'private_key_hex': '0000000000000000000000000000000000000000000000000000000000000040',
-        'description': 'Two-Factor P2WSH User key'
-    },
-    'twofactor_p2wsh_service': {
-        'private_key_hex': '0000000000000000000000000000000000000000000000000000000000000041',
-        'description': 'Two-Factor P2WSH Service key'
-    },
-    'twofactor_p2wsh_recovery': {
-        'private_key_hex': '0000000000000000000000000000000000000000000000000000000000000042',
-        'description': 'Two-Factor P2WSH Recovery key'
-    },
-    'twofactor_taproot_user': {
-        'private_key_hex': '0000000000000000000000000000000000000000000000000000000000000050',
-        'description': 'Two-Factor Taproot User key'
-    },
-    'twofactor_taproot_service': {
-        'private_key_hex': '0000000000000000000000000000000000000000000000000000000000000051',
-        'description': 'Two-Factor Taproot Service key'
-    },
-    'twofactor_taproot_recovery': {
-        'private_key_hex': '0000000000000000000000000000000000000000000000000000000000000052',
-        'description': 'Two-Factor Taproot Recovery key'
-    },
-    # Payment Channel Keys
-    'payment_p2wsh_sender': {
-        'private_key_hex': '0000000000000000000000000000000000000000000000000000000000000060',
-        'description': 'Payment Channel P2WSH Sender key'
-    },
-    'payment_p2wsh_receiver': {
-        'private_key_hex': '0000000000000000000000000000000000000000000000000000000000000061',
-        'description': 'Payment Channel P2WSH Receiver key'
-    },
-    'payment_taproot_sender': {
-        'private_key_hex': '0000000000000000000000000000000000000000000000000000000000000070',
-        'description': 'Payment Channel Taproot Sender key'
-    },
-    'payment_taproot_receiver': {
-        'private_key_hex': '0000000000000000000000000000000000000000000000000000000000000071',
-        'description': 'Payment Channel Taproot Receiver key'
-    },
-    # Data Publishing Keys
-    'data_p2wsh_publisher': {
-        'private_key_hex': '0000000000000000000000000000000000000000000000000000000000000080',
-        'description': 'Data Publishing P2WSH Publisher key'
-    },
-    'data_p2wsh_buyer': {
-        'private_key_hex': '0000000000000000000000000000000000000000000000000000000000000081',
-        'description': 'Data Publishing P2WSH Buyer key'
-    },
-    'data_taproot_publisher': {
-        'private_key_hex': '0000000000000000000000000000000000000000000000000000000000000090',
-        'description': 'Data Publishing Taproot Publisher key'
-    },
-    'data_taproot_buyer': {
-        'private_key_hex': '0000000000000000000000000000000000000000000000000000000000000091',
-        'description': 'Data Publishing Taproot Buyer key'
-    },
+    # Escrow - uses alice/bob/lenny for all formats
+    'escrow_p2wsh_alice': 'alice',
+    'escrow_p2wsh_bob': 'bob',
+    'escrow_p2wsh_lenny': 'lenny',
+    'escrow_taproot_alice': 'alice',
+    'escrow_taproot_bob': 'bob',
+    'escrow_taproot_lenny': 'lenny',
+    
+    # Two-Factor - uses user/service/recovery for all formats
+    'twofactor_p2wsh_user': 'user',
+    'twofactor_p2wsh_service': 'service',
+    'twofactor_p2wsh_recovery': 'recovery',
+    'twofactor_taproot_user': 'user',
+    'twofactor_taproot_service': 'service',
+    'twofactor_taproot_recovery': 'recovery',
+    
+    # Payment Channel - uses sender/receiver for all formats
+    'payment_p2wsh_sender': 'sender',
+    'payment_p2wsh_receiver': 'receiver',
+    'payment_taproot_sender': 'sender',
+    'payment_taproot_receiver': 'receiver',
+    
+    # Data Publishing - uses publisher/buyer for all formats
+    'data_p2wsh_publisher': 'publisher',
+    'data_p2wsh_buyer': 'buyer',
+    'data_taproot_publisher': 'publisher',
+    'data_taproot_buyer': 'buyer',
 }
 
 
 def get_test_keypair(key_id: str) -> dict:
     """
-    Get a hardcoded test keypair by ID.
+    Get a test keypair by ID.
+    
+    Uses central test_keys.py for all keys.
+    Supports both old format-specific IDs and new central names.
     
     Returns dict with:
         - private_key: ECPrivkey instance
@@ -650,16 +599,18 @@ def get_test_keypair(key_id: str) -> dict:
         - pubkey_compressed: Hex string (33 bytes) for P2WSH
         - pubkey_xonly: Hex string (32 bytes) for Taproot
     """
-    if key_id not in TEST_KEYS:
-        raise ValueError(f"Unknown test key ID: {key_id}")
+    # Map old key IDs to central key names
+    central_key_name = KEY_ID_MAP.get(key_id, key_id)
     
-    privkey_hex = TEST_KEYS[key_id]['private_key_hex']
-    privkey = ECPrivkey(bytes.fromhex(privkey_hex))
-    pubkey_bytes = privkey.get_public_key_bytes(compressed=True)
+    # Get keypair from central test_keys.py
+    keypair = _central_get_keypair(central_key_name)
+    
+    # Convert to expected format
+    pubkey_bytes = keypair['privkey'].get_public_key_bytes(compressed=True)
     
     return {
-        'private_key': privkey,
-        'private_key_hex': privkey_hex,
+        'private_key': keypair['privkey'],
+        'private_key_hex': keypair['privkey_hex'],
         'pubkey_compressed': pubkey_bytes.hex(),
         'pubkey_xonly': pubkey_bytes[1:].hex()  # Remove first byte for Taproot
     }
@@ -817,10 +768,7 @@ def alice_bob_keypairs(generate_keypair):
     BIP-65 Escrow Example: "Alice and Bob jointly operate a business...
     they appoint their lawyer, Lenny, to act as a third-party."
     
-    For E2E tests, uses hardcoded test keys so we never lose them.
-    For unit tests, generates random keys.
-    
-    Note: P2SH support removed - only P2WSH and Taproot are supported.
+    Now uses central test_keys.py - same keys for all formats!
     
     Returns:
         function: Function that takes format ('p2wsh', 'taproot')
@@ -832,21 +780,10 @@ def alice_bob_keypairs(generate_keypair):
         ...     # All three parties can now sign with known keys
     """
     def _get_triplet(format_name='p2wsh'):
-        # For E2E tests, use hardcoded keys based on format
-        if format_name == 'p2wsh':
-            alice = generate_keypair('escrow_p2wsh_alice')
-            bob = generate_keypair('escrow_p2wsh_bob')
-            lenny = generate_keypair('escrow_p2wsh_lenny')
-        elif format_name == 'taproot':
-            alice = generate_keypair('escrow_taproot_alice')
-            bob = generate_keypair('escrow_taproot_bob')
-            lenny = generate_keypair('escrow_taproot_lenny')
-        else:
-            # For unit tests or unknown formats, generate random
-            alice = generate_keypair()
-            bob = generate_keypair()
-            lenny = generate_keypair()
-        
+        # Same keys for all formats - uses central test_keys.py
+        alice = generate_keypair('alice')
+        bob = generate_keypair('bob')
+        lenny = generate_keypair('lenny')
         return alice, bob, lenny
     
     return _get_triplet
@@ -855,39 +792,27 @@ def alice_bob_keypairs(generate_keypair):
 @pytest.fixture
 def twofactor_keypairs(generate_keypair):
     """
-    Generate keypairs for Two-Factor Wallet (User, Service, Recovery).
+    Generate keypairs for Two-Factor Wallet (User, Service).
     
-    For E2E tests, uses hardcoded test keys so we never lose them.
-    For unit tests, generates random keys.
+    Now uses central test_keys.py - same keys for all formats!
+    Note: Recovery key is same as User in unified design.
     
     Returns:
         function: Function that takes format ('p2wsh', 'taproot')
-                  and returns (user_keypair, service_keypair, recovery_keypair) tuple
+                  and returns (user_keypair, service_keypair) tuple
     
     Example:
         >>> def test_twofactor(twofactor_keypairs):
-        ...     user, service, recovery = twofactor_keypairs('p2wsh')
-        ...     # All three parties can now sign with known keys
+        ...     user, service = twofactor_keypairs('p2wsh')
+        ...     # Both parties can now sign
     """
-    def _get_triplet(format_name='p2wsh'):
-        # For E2E tests, use hardcoded keys based on format
-        if format_name == 'p2wsh':
-            user = generate_keypair('twofactor_p2wsh_user')
-            service = generate_keypair('twofactor_p2wsh_service')
-            recovery = generate_keypair('twofactor_p2wsh_recovery')
-        elif format_name == 'taproot':
-            user = generate_keypair('twofactor_taproot_user')
-            service = generate_keypair('twofactor_taproot_service')
-            recovery = generate_keypair('twofactor_taproot_recovery')
-        else:
-            # For unit tests or unknown formats, generate random
-            user = generate_keypair()
-            service = generate_keypair()
-            recovery = generate_keypair()
-        
-        return user, service, recovery
+    def _get_pair(format_name='p2wsh'):
+        # Same keys for all formats - uses central test_keys.py
+        user = generate_keypair('user')
+        service = generate_keypair('service')
+        return user, service
     
-    return _get_triplet
+    return _get_pair
 
 
 @pytest.fixture
@@ -895,8 +820,7 @@ def payment_keypairs(generate_keypair):
     """
     Generate keypairs for Payment Channel (Sender, Receiver).
     
-    For E2E tests, uses hardcoded test keys so we never lose them.
-    For unit tests, generates random keys.
+    Now uses central test_keys.py - same keys for all formats!
     
     Returns:
         function: Function that takes format ('p2wsh', 'taproot')
@@ -908,18 +832,9 @@ def payment_keypairs(generate_keypair):
         ...     # Both parties can now sign with known keys
     """
     def _get_pair(format_name='p2wsh'):
-        # For E2E tests, use hardcoded keys based on format
-        if format_name == 'p2wsh':
-            sender = generate_keypair('payment_p2wsh_sender')
-            receiver = generate_keypair('payment_p2wsh_receiver')
-        elif format_name == 'taproot':
-            sender = generate_keypair('payment_taproot_sender')
-            receiver = generate_keypair('payment_taproot_receiver')
-        else:
-            # For unit tests or unknown formats, generate random
-            sender = generate_keypair()
-            receiver = generate_keypair()
-        
+        # Same keys for all formats - uses central test_keys.py
+        sender = generate_keypair('sender')
+        receiver = generate_keypair('receiver')
         return sender, receiver
     
     return _get_pair
@@ -930,8 +845,7 @@ def data_publishing_keypairs(generate_keypair):
     """
     Generate keypairs for Data Publishing (Publisher, Buyer).
     
-    For E2E tests, uses hardcoded test keys so we never lose them.
-    For unit tests, generates random keys.
+    Now uses central test_keys.py - same keys for all formats!
     
     Returns:
         function: Function that takes format ('p2wsh', 'taproot')
@@ -943,18 +857,9 @@ def data_publishing_keypairs(generate_keypair):
         ...     # Both parties can now sign with known keys
     """
     def _get_pair(format_name='p2wsh'):
-        # For E2E tests, use hardcoded keys based on format
-        if format_name == 'p2wsh':
-            publisher = generate_keypair('data_p2wsh_publisher')
-            buyer = generate_keypair('data_p2wsh_buyer')
-        elif format_name == 'taproot':
-            publisher = generate_keypair('data_taproot_publisher')
-            buyer = generate_keypair('data_taproot_buyer')
-        else:
-            # For unit tests or unknown formats, generate random
-            publisher = generate_keypair()
-            buyer = generate_keypair()
-        
+        # Same keys for all formats - uses central test_keys.py
+        publisher = generate_keypair('publisher')
+        buyer = generate_keypair('buyer')
         return publisher, buyer
     
     return _get_pair
@@ -1038,3 +943,51 @@ def test_data_preimage_taproot():
         'data_hash': data_hash,
         'data_hash_bytes': data_hash_bytes
     }
+
+
+# ============================================================================
+# TEST PERFORMANCE TRACKING
+# ============================================================================
+
+@pytest.fixture(autouse=True)
+def track_test_performance(request):
+    """
+    Track and report test execution time.
+    
+    Automatically runs for every test. Logs timing information and warns
+    about slow tests (> 30 seconds).
+    """
+    import time
+    
+    test_name = request.node.name
+    start_time = time.time()
+    
+    yield
+    
+    duration = time.time() - start_time
+    
+    # Categorize test speed
+    if duration < 5:
+        speed_emoji = "⚡"
+        speed_label = "fast"
+    elif duration < 15:
+        speed_emoji = "🏃"
+        speed_label = "normal"
+    elif duration < 30:
+        speed_emoji = "🐢"
+        speed_label = "slow"
+    else:
+        speed_emoji = "🐌"
+        speed_label = "very slow"
+    
+    # Log timing (only for verbose mode)
+    if request.config.getoption("-v"):
+        print(f"\n{speed_emoji} {test_name}: {duration:.2f}s ({speed_label})")
+    
+    # Warn about very slow tests
+    if duration > 30:
+        import warnings
+        warnings.warn(
+            f"Slow test detected: {test_name} took {duration:.2f}s",
+            UserWarning
+        )

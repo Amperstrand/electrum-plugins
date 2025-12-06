@@ -170,7 +170,7 @@ def generate_keypair():
 ```python
 def validate_script_type(script_type: str) -> None:
     """Validate script type string against known types."""
-    valid = ['cltv_simple_hodl', 'cltv_simple_hodl_p2wsh', 'cltv_taproot',
+    valid = ['cltv_hodl', 'cltv_hodl_p2wsh', 'cltv_taproot',
              'cltv_escrow_timeout', 'cltv_escrow_timeout_p2wsh', 'cltv_escrow_timeout_taproot']
     if script_type not in valid:
         raise ValueError(f"Unknown script_type: {script_type}\nValid: {', '.join(valid)}")
@@ -206,15 +206,15 @@ def validate_pubkey(pubkey_hex: str, expected_len: int, name: str = "pubkey") ->
 ```python
 # script_builders/registry.py
 BUILDERS = {
-    'cltv_simple_hodl': SimpleCLTVBuilder,
-    'cltv_simple_hodl_p2wsh': SimpleCLTVBuilder,
+    'cltv_hodl': SimpleCLTVBuilder,
+    'cltv_hodl_p2wsh': SimpleCLTVBuilder,
     # ... 6 entries
 }
 
 # sweepers/registry.py
 SWEEPERS = {
-    'cltv_simple_hodl': SimpleCLTVSweeper,
-    'cltv_simple_hodl_p2wsh': SimpleCLTVSweeper,
+    'cltv_hodl': SimpleCLTVSweeper,
+    'cltv_hodl_p2wsh': SimpleCLTVSweeper,
     # ... 6 entries (must match above!)
 }
 ```
@@ -235,7 +235,7 @@ class ScriptConfig:
     example: str
 
 SCRIPT_REGISTRY = {
-    'cltv_simple_hodl': ScriptConfig(
+    'cltv_hodl': ScriptConfig(
         builder_class=SimpleCLTVBuilder,
         sweeper_class=SimpleCLTVSweeper,
         format=ScriptFormat.P2SH,

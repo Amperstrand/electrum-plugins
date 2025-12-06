@@ -97,8 +97,7 @@ source venv/bin/activate
 
 ### 2. Wait for Confirmation
 
-- Watch balance update in Sweep tab
-- Or refresh manually with "Refresh Cache" button
+- Watch balance update automatically in Sweep tab (Electrum monitors addresses automatically)
 
 ### 3. Wait for Locktime
 
@@ -139,7 +138,7 @@ In Electrum Console, you should see:
 
 - Tools → CLTV Timelock → Sweep Tab
 - Should show generated addresses
-- Refresh button should update balances
+- Balances update automatically when new blocks arrive or wallet state changes
 
 ---
 
