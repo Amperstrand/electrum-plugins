@@ -1,0 +1,261 @@
+Electrum is a Qt app, so there isn’t really a “Qt vs Electrum UI” choice — you’ll use Qt widgets, but it’s smart to lean on Electrum’s helper classes so your dialog looks and feels native.
+
+Let me break it down by:
+
+How to embed this in Electrum
+
+Which specific widgets to use for each part of the visualization
+
+Where to use Electrum helpers vs raw Qt
+
+1. Where this lives in Electrum
+
+You basically have two good options:
+
+Option A – Separate dialog (easiest to start with)
+
+Triggered from a menu item / right-click → “View spending conditions…”
+
+Implemented as a WindowModalDialog (Electrum wrapper around QDialog):
+
+from electrum.gui.qt.util import WindowModalDialog
+
+class MiniscriptDialog(WindowModalDialog):
+    def __init__(self, parent, wallet, script_info):
+        super().__init__(parent, _("Spending conditions"))
+        # build layouts and widgets here
+
+
+Why this is nice:
+
+No need to touch Electrum’s main tab layout.
+
+You can open it for a specific UTXO, address, or script.
+
+Option B – New tab in the main window (more integrated)
+
+Add a “Policy” or “Scripts” tab to the main ElectrumWindow (QTabWidget).
+
+Use a normal QWidget with layouts.
+
+If you’re just prototyping, start with Option A. You can always migrate the core widget into a tab later.
+
+2. Recommended widgets for your visualization
+
+Think of your UI in 3 sections: script info, tree view, simulator controls.
+
+2.1 Layout containers
+
+Use Qt layouts:
+
+QVBoxLayout for vertical stacking.
+
+QHBoxLayout for side-by-side sections.
+
+QSplitter if you want resizable panes (tree left, simulator right).
+
+Rough structure in the dialog:
+
+main_layout = QVBoxLayout(self)
+
+# Top: script info
+top_widget = QWidget()
+top_layout = QVBoxLayout(top_widget)
+main_layout.addWidget(top_widget)
+
+# Bottom: split tree + simulator
+splitter = QSplitter()
+main_layout.addWidget(splitter)
+
+left = QWidget()
+left_layout = QVBoxLayout(left)
+splitter.addWidget(left)
+
+right = QWidget()
+right_layout = QVBoxLayout(right)
+splitter.addWidget(right)
+
+2.2 Script info (top area)
+
+Use a mix of labels and a read-only text edit.
+
+Widgets:
+
+QLabel for “Descriptor:”, “Address:”.
+
+ButtonsTextEdit (Electrum helper) or QPlainTextEdit set to read-only for the descriptor/Miniscript.
+
+Example:
+
+from electrum.gui.qt.util import ButtonsTextEdit
+
+descriptor_edit = ButtonsTextEdit()
+descriptor_edit.setReadOnly(True)
+descriptor_edit.setText(descriptor_str)
+top_layout.addWidget(QLabel(_("Descriptor")))
+top_layout.addWidget(descriptor_edit)
+
+2.3 Tree / “control block” visualization (bottom left)
+
+Simplest and most robust: tree view first, fancy graphics later.
+
+Use QTreeWidget (or QTreeView + model)
+
+Each AST node becomes a QTreeWidgetItem.
+
+The hierarchy naturally expresses AND/OR/THRESH structure.
+
+You can color items based on satisfaction state.
+
+tree = QTreeWidget()
+tree.setHeaderHidden(True)  # we don’t really need columns
+left_layout.addWidget(tree)
+
+
+Populate it from your AST:
+
+and node → parent item “AND”
+
+or node → parent item “OR”
+
+thresh → “k-of-n” label
+
+leaves → “Signature: Alice”, “After block 800000”, etc.
+
+Optional: use icons.
+
+from electrum.gui.qt.util import read_QIcon
+
+key_icon = read_QIcon("key.png")
+clock_icon = read_QIcon("clock.png")
+hash_icon = read_QIcon("hash.png")
+
+
+Set them per item:
+
+item.setIcon(0, key_icon)
+item.setToolTip(0, miniscript_fragment)
+
+
+Later, if you want Elephant-style block graphics, you can:
+
+Use QGraphicsView + QGraphicsScene for colored rectangles and arrows.
+
+But I’d get the QTreeWidget version working first — much less pain.
+
+2.4 Simulator panel (bottom right)
+
+Here you want simple form-style controls:
+
+Use QFormLayout + standard widgets
+
+QSpinBox or QLineEdit for current block height.
+
+Another QSpinBox for confirmation height (for relative timelocks).
+
+QGroupBox + QVBoxLayout + QCheckBox for signatures.
+
+QLineEdit for hash preimages.
+
+A big status QLabel at the bottom.
+
+Example skeleton:
+
+from PyQt5.QtWidgets import (
+    QFormLayout, QSpinBox, QGroupBox, QVBoxLayout, QCheckBox, QLabel, QLineEdit
+)
+
+form = QFormLayout()
+right_layout.addLayout(form)
+
+# Block heights
+current_height_spin = QSpinBox()
+current_height_spin.setMaximum(5000000)
+form.addRow(_("Current block height:"), current_height_spin)
+
+confirm_height_spin = QSpinBox()
+confirm_height_spin.setMaximum(5000000)
+form.addRow(_("Confirmed at height:"), confirm_height_spin)
+
+# Signatures group
+sigs_group = QGroupBox(_("Available signatures"))
+sigs_layout = QVBoxLayout(sigs_group)
+for label in signer_labels:  # e.g. ["Alice", "Bob"]
+    cb = QCheckBox(label)
+    sigs_layout.addWidget(cb)
+right_layout.addWidget(sigs_group)
+
+# Hash preimages
+hash_group = QGroupBox(_("Hash preimages"))
+hash_layout = QFormLayout(hash_group)
+for h in hashes:  # list of known hash locks
+    edit = QLineEdit()
+    hash_layout.addRow(h.short_label, edit)
+right_layout.addWidget(hash_group)
+
+# Result label
+result_label = QLabel(_("Result: (not evaluated)"))
+right_layout.addWidget(result_label)
+
+
+Then connect signals:
+
+current_height_spin.valueChanged.connect(self.recompute_satisfaction)
+confirm_height_spin.valueChanged.connect(self.recompute_satisfaction)
+cb.stateChanged.connect(self.recompute_satisfaction)
+edit.textChanged.connect(self.recompute_satisfaction)
+
+
+And in recompute_satisfaction() you:
+
+Evaluate your AST with this state.
+
+Color tree items (green/red/grey).
+
+Update result_label.
+
+3. Electrum helpers you should reuse
+
+Electrum has some convenience stuff in electrum.gui.qt.util that you should use so you get consistent styling and behavior:
+
+WindowModalDialog – base class for modal dialogs.
+
+Buttons, OkButton, CloseButton, CancelButton – for the bottom button row.
+
+ButtonsTextEdit – text edit with copy/save buttons.
+
+read_QIcon, ColorScheme – consistent icons and colors.
+
+_() – translation wrapper.
+
+Example for dialog buttons:
+
+from electrum.gui.qt.util import Buttons, CloseButton
+
+buttons = Buttons(CloseButton(self))
+main_layout.addLayout(buttons)
+
+
+You don’t need a special Electrum widget for the tree/simulator; standard Qt is perfectly fine there.
+
+4. So: “Electrum UI” or “Qt directly”?
+
+In practice:
+
+Use Qt directly for the core widgets/layout:
+
+QTreeWidget, QSpinBox, QCheckBox, QLineEdit, QFormLayout, etc.
+
+Use Electrum’s wrappers for integration & polish:
+
+WindowModalDialog, ButtonsTextEdit, Buttons, icons, color scheme.
+
+That gives you:
+
+Minimal friction (normal PyQt code).
+
+A UI that looks like it belongs in Electrum.
+
+A clear path to later move the central widget into a tab if you want.
+
+If you want, I can next sketch a tiny “fake” plugin file that defines MiniscriptDialog with an actual working layout (no logic yet) so you can drop it into Electrum and see the skeleton.

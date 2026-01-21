@@ -85,19 +85,55 @@ def get_test_data_for_contract(contract: ContractDefinition, locktime: int) -> T
     
     SINGLE SOURCE OF TRUTH: Uses ParamSpec.test_key_name to load keys.
     
+    Handles multiple locktime parameters (e.g., locktime_60m, locktime_66m for decaying multisig).
+    For contracts with multiple locktimes, sets them with appropriate offsets from base locktime.
+    
     Returns:
-        (params dict, keys dict)
+        (params dict, keys dict, data_preimage, data_hash)
     """
-    params = {'locktime': locktime}
+    params = {}
     keys = {}
     
     # Special handling for data_publishing preimage
     data_preimage = None
     data_hash = None
     
+    # Collect all locktime parameters
+    locktime_params = []
     for param_spec in contract.params:
-        if param_spec.param_type == 'locktime':
-            continue  # Already set
+        # Check if this is a locktime parameter (by name or type)
+        if (param_spec.param_type == 'locktime' or 
+            param_spec.name.startswith('locktime') or
+            'locktime' in param_spec.name.lower()):
+            locktime_params.append(param_spec)
+    
+    # Set locktime parameters
+    if len(locktime_params) == 1:
+        # Single locktime: use base locktime
+        params[locktime_params[0].name] = locktime
+        # Also set 'locktime' for backwards compatibility
+        if locktime_params[0].name != 'locktime':
+            params['locktime'] = locktime
+    elif len(locktime_params) > 1:
+        # Multiple locktimes: set with offsets (e.g., for decaying multisig)
+        # locktime_60m = locktime + 0 (first decay point)
+        # locktime_66m = locktime + offset (second decay point)
+        # Use 6 block offset for 66m vs 60m (representing 6 months)
+        for i, param_spec in enumerate(locktime_params):
+            # Offset in blocks: 0 for first, 6 for second (representing ~6 months)
+            offset = i * 6
+            params[param_spec.name] = locktime + offset
+        # Also set 'locktime' for backwards compatibility
+        params['locktime'] = locktime
+    else:
+        # No locktime params: set default for backwards compatibility
+        params['locktime'] = locktime
+    
+    # Process other parameters
+    for param_spec in contract.params:
+        # Skip locktime params (already handled)
+        if param_spec in locktime_params:
+            continue
             
         if param_spec.param_type == 'pubkey' and param_spec.test_key_name:
             # Load keypair using test_key_name from ContractDefinition

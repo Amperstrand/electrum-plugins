@@ -35,7 +35,13 @@ Thumbs.db
 # E2E Test artifacts
 /checklocktimeverify/e2e_tests/logs/
 /checklocktimeverify/e2e_tests/test_state_*.json
+/checklocktimeverify/e2e_tests/*results*.json
 *.hex
+
+# Checklocktimeverify specific artifacts
+/checklocktimeverify/miniscript/.git/
+/checklocktimeverify/__pycache__/
+/checklocktimeverify/**/__pycache__/
 
 # Pytest
 .pytest_cache/

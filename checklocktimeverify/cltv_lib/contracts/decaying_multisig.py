@@ -26,8 +26,8 @@ DECAYING_MULTISIG = ContractDefinition(
         ")"
     ),
     params=[
-        ParamSpec("locktime_60m", "Block height after 60 months (when 2-of-5 becomes available)"),
-        ParamSpec("locktime_66m", "Block height after 66 months (when 1-of-5 becomes available)"),
+        ParamSpec("locktime_60m", "Block height after 60 months (when 2-of-5 becomes available)", param_type="locktime"),
+        ParamSpec("locktime_66m", "Block height after 66 months (when 1-of-5 becomes available)", param_type="locktime"),
         ParamSpec("key1", "First public key", param_type="pubkey", test_key_name="alice"),
         ParamSpec("key2", "Second public key", param_type="pubkey", test_key_name="bob"),
         ParamSpec("key3", "Third public key", param_type="pubkey", test_key_name="lenny"),

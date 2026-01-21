@@ -6,7 +6,6 @@ allowing easy verification that the correct version is running.
 """
 
 import subprocess
-import os
 from pathlib import Path
 from typing import Tuple, Optional
 from datetime import datetime
@@ -52,7 +51,7 @@ def get_git_info() -> Tuple[str, str, str]:
             try:
                 dt = datetime.strptime(date_str[:19], '%Y-%m-%d %H:%M:%S')
                 commit_date = dt.strftime('%Y-%m-%d %H:%M')
-            except:
+            except (ValueError, TypeError):
                 commit_date = date_str[:16] if date_str else 'unknown'
         else:
             commit_date = 'unknown'

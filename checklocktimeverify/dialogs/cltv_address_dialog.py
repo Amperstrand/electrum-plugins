@@ -1134,6 +1134,18 @@ class CLTVAddressDialog(WindowModalDialog, QtEventListener):
         self._refresh_coin_list()
         logger.info(f"[DIALOG]   Coin list refreshed")
 
+        # Visualizer button - show ALL spending paths in one tree (top-level, not per-path)
+        self.add_horizontal_separator(layout)
+        from electrum.gui.qt.util import OkButton
+        script_type = self.addr_data.get('script_type', '')
+        output_type = 'taproot' if 'taproot' in script_type else 'p2wsh'
+        viz_btn = OkButton(self, _("View Spending Conditions"))
+        viz_btn.setToolTip(_("View all spending paths in policy tree visualization"))
+        viz_btn.clicked.connect(
+            lambda checked: self._show_miniscript_visualizer_all_paths(contract, output_type, params)
+        )
+        layout.addWidget(viz_btn)
+        
         # Spending paths section - clean visual separation
         logger.info(f"[DIALOG]   contract.paths: {contract.paths}")
         if contract.paths:
@@ -1316,7 +1328,77 @@ class CLTVAddressDialog(WindowModalDialog, QtEventListener):
         
         dialog = PathDetailsDialog(self, contract, path, params, output_type, network)
         dialog.exec()
-
+    
+    def _show_miniscript_visualizer_all_paths(self, contract: ContractDefinition, output_type: str, params: dict):
+        """Show the miniscript visualizer dialog with ALL spending paths."""
+        from .miniscript_visualizer import MiniscriptVisualizerDialog
+        
+        # For Taproot: we'll show all leaves in the visualizer
+        # For P2WSH: show the main miniscript
+        # The visualizer will handle showing all paths if it's Taproot with multiple leaves
+        if output_type == 'taproot' and contract.taproot_leaves:
+            # Use first leaf as primary (visualizer will show all)
+            miniscript_str = contract.taproot_leaves[0]
+        else:
+            # Use contract's miniscript directly (symbolic form)
+            miniscript_str = contract.miniscript
+        
+        # Get key labels using contract's key_roles for better display names
+        key_labels = {}
+        # First, map pubkeys to parameter names from params dict
+        pubkey_to_param_name = {}
+        for key_name, key_value in params.items():
+            if isinstance(key_value, bytes) and len(key_value) in (33, 32):  # Compressed or x-only
+                pubkey_to_param_name[key_value] = key_name
+            elif isinstance(key_value, str):
+                # Try to parse hex string
+                try:
+                    pubkey_bytes = bytes.fromhex(key_value)
+                    if len(pubkey_bytes) in (33, 32):
+                        pubkey_to_param_name[pubkey_bytes] = key_name
+                except:
+                    pass
+        
+        # Now map to display names using contract's key_roles
+        for pubkey, param_name in pubkey_to_param_name.items():
+            # Try to get key role from contract
+            key_role = contract.get_key_role(param_name)
+            if key_role:
+                # Use display name from key role (e.g., "Alice (Party A)")
+                key_labels[pubkey] = key_role.display_name
+            else:
+                # Fallback to parameter name, but make it more readable
+                # Convert "alice" -> "Alice", "key1" -> "Key 1"
+                display_name = param_name.replace('_', ' ').title()
+                key_labels[pubkey] = display_name
+        
+        # Get Taproot metadata if applicable (for all paths, not just one)
+        taproot_metadata = None
+        if output_type == 'taproot':
+            # Try to extract Taproot metadata from address data
+            taproot_metadata = {}
+            if hasattr(self, 'addr_data'):
+                # Look for taproot-specific fields
+                addr_info = self.addr_data.get('taproot_addr_info', {})
+                if addr_info:
+                    # Get general taproot info (not path-specific)
+                    taproot_metadata['internal_key'] = addr_info.get('internal_key')
+                    taproot_metadata['output_key'] = addr_info.get('output_key')
+                    taproot_metadata['merkle_root'] = addr_info.get('merkle_root')
+                    # Don't set leaf_index - visualizer will show all leaves
+        
+        # Create visualizer dialog (will show all paths for Taproot contracts)
+        dialog = MiniscriptVisualizerDialog(
+            self,
+            miniscript_str,
+            params,
+            key_labels=key_labels,
+            address=self.address,
+            context='tapscript' if output_type == 'taproot' else 'p2wsh',
+            taproot_metadata=taproot_metadata,
+            contract=contract  # Pass contract for key role lookups - visualizer will load all leaves
+        )
+        dialog.exec()
 
     
     def _update_balance_display(self, **kwargs):

@@ -360,103 +360,101 @@ class Plugin(BasePlugin):
             import traceback
             traceback.print_exc()
     
-    def _register_addresses_with_wallet(self, wallet, addresses):
-        """Register CLTV addresses with Electrum's ADB for automatic UTXO tracking."""
-        if not addresses:
+    def _register_addresses_with_wallet(self, wallet, addresses=None, address=None):
+        """Register CLTV addresses with Electrum wallet for UTXO tracking.
+        
+        Consolidated method that handles:
+        - Single address or list of addresses
+        - Multiple registration strategies (import_address, ADB.add_address)
+        - Automatic network sync triggering
+        - Comprehensive error handling
+        
+        Args:
+            wallet: Wallet instance
+            addresses: List of address dicts (optional)
+            address: Single address string (optional)
+        """
+        # Normalize input to list
+        if address:
+            address_list = [{'address': address}]
+        elif addresses:
+            address_list = addresses
+        else:
             return
         
         try:
             registered_count = 0
             
-            for addr_data in addresses:
-                address = addr_data['address']
+            for addr_data in address_list:
+                if isinstance(addr_data, dict):
+                    addr = addr_data.get('address')
+                else:
+                    addr = addr_data
                 
+                if not addr:
+                    continue
+                    
                 # Skip if already tracked
-                if wallet.is_mine(address):
+                if wallet.is_mine(addr):
+                    logger.debug(f"[CLTV] [WALLET] Address already tracked: {addr[:20]}...")
                     continue
                 
-                # Register with ADB (lower-level, works for all wallet types)
-                if hasattr(wallet, 'adb') and hasattr(wallet.adb, 'add_address'):
+                # Try multiple registration strategies in order of preference
+                registered = False
+                
+                # Strategy 1: wallet.import_address() (higher-level API)
+                if not registered and hasattr(wallet, 'import_address'):
                     try:
-                        wallet.adb.add_address(address)
+                        wallet.import_address(addr)
+                        logger.info(f"[CLTV] [WALLET] ✓ Registered via import_address: {addr[:20]}...")
                         registered_count += 1
-                    except Exception:
-                        pass
+                        registered = True
+                    except AttributeError:
+                        logger.debug(f"[CLTV] [WALLET] import_address not available for: {addr[:20]}...")
+                    except Exception as e:
+                        logger.debug(f"[CLTV] [WALLET] import_address failed for {addr[:20]}...: {e}")
+                
+                # Strategy 2: wallet.adb.add_address() (lower-level API)
+                if not registered and hasattr(wallet, 'adb') and hasattr(wallet.adb, 'add_address'):
+                    try:
+                        wallet.adb.add_address(addr)
+                        logger.info(f"[CLTV] [WALLET] ✓ Registered via ADB.add_address: {addr[:20]}...")
+                        registered_count += 1
+                        registered = True
+                    except Exception as e:
+                        logger.warning(f"[CLTV] [WALLET] ⚠️  ADB.add_address failed for {addr[:20]}...: {e}")
+                
+                if not registered:
+                    logger.warning(f"[CLTV] [WALLET] ⚠️  No registration method worked for: {addr[:20]}...")
             
+            # Trigger network sync if any addresses were registered
             if registered_count > 0:
-                # Trigger sync to fetch history for newly added addresses
-                if hasattr(wallet, 'synchronize'):
-                    wallet.synchronize()
-                logger.info(f"[CLTV] [WALLET] Registered {registered_count} CLTV addresses with Electrum")
+                self._trigger_wallet_sync(wallet)
+                logger.info(f"[CLTV] [WALLET] ✓ Registered {registered_count} CLTV addresses with Electrum")
             
         except Exception as e:
             logger.error(f"[CLTV] [WALLET] Error registering addresses: {e}")
     
-    def _register_single_address_with_wallet(self, wallet, address):
-        """Register a single CLTV address with Electrum wallet."""
+    def _trigger_wallet_sync(self, wallet):
+        """Trigger network sync to fetch history for newly registered addresses."""
         try:
-            # Check if already registered
-            if wallet.is_mine(address):
-                logger.debug(f"[CLTV] [WALLET] Address already is_mine: {address[:20]}...")
-                return
-            
-            logger.debug(f"[CLTV] [WALLET] Attempting to register: {address[:20]}...")
-            logger.debug(f"[CLTV] [WALLET]   Wallet type: {type(wallet).__name__}")
-            logger.debug(f"[CLTV] [WALLET]   has import_address: {hasattr(wallet, 'import_address')}")
-            
-            # Add to wallet's address list for UTXO tracking
-            try:
-                # Import as watching address
-                wallet.import_address(address)
-                logger.info(f"[CLTV] [WALLET] ✓ Registered address via import_address: {address[:20]}...")
-            except AttributeError as ae:
-                logger.debug(f"[CLTV] [WALLET] import_address not available: {ae}")
-                # Wallet type doesn't support import_address (e.g., deterministic wallets)
-                # Try alternative method: add to address synchronizer directly
-                if hasattr(wallet, 'adb') and hasattr(wallet.adb, 'add_address'):
-                    wallet.adb.add_address(address)
-                    logger.info(f"[CLTV] [WALLET] ✓ Added via ADB.add_address: {address[:20]}...")
-                else:
-                    logger.warning(f"[CLTV] [WALLET] ⚠️  No registration method available for: {address[:20]}...")
-            except Exception as e:
-                logger.warning(f"[CLTV] [WALLET] ⚠️  import_address failed for {address[:20]}...: {e}")
-                # Try ADB fallback
-                if hasattr(wallet, 'adb') and hasattr(wallet.adb, 'add_address'):
-                    try:
-                        wallet.adb.add_address(address)
-                        logger.info(f"[CLTV] [WALLET] ✓ Fallback to ADB.add_address: {address[:20]}...")
-                    except Exception as e2:
-                        logger.error(f"[CLTV] [WALLET] ❌ ADB.add_address also failed: {e2}")
-            
-            # Trigger sync to fetch history for newly added address
+            # Simple sync - use wallet's synchronize method if available
             if hasattr(wallet, 'synchronize'):
-                wallet.synchronize()
-        except Exception as e:
-            logger.info(f"[CLTV] [WALLET] Error registering address {address[:20]}...: {e}")
-    
-    def _trigger_address_sync(self, wallet, address):
-        """Trigger network sync to fetch history for newly added address"""
-        try:
-            # Get the synchronizer from the wallet
-            if not hasattr(wallet, 'adb'):
-                return
+                try:
+                    wallet.synchronize()
+                    logger.debug(f"[CLTV] [SYNC] ✓ Triggered wallet sync")
+                    return
+                except Exception as e:
+                    logger.debug(f"[CLTV] [SYNC] Wallet synchronize failed: {e}")
             
-            adb = wallet.adb
-            if not hasattr(adb, 'synchronizer') or not adb.synchronizer:
-                logger.debug(f"[CLTV] [SYNC] No synchronizer available")
-                return
-            
-            # Request scripthash subscription from the network
-            # This will trigger the synchronizer to fetch the address history
-            from electrum.bitcoin import address_to_scripthash
-            sh = address_to_scripthash(address)
-            
-            # The synchronizer will automatically fetch history when we subscribe
-            # Force an immediate sync by calling the synchronizer's method
-            if hasattr(adb.synchronizer, 'synchronize'):
-                adb.synchronizer.synchronize()
-                logger.info(f"[CLTV] [SYNC] ✓ Triggered network sync for {address[:20]}...")
-            
+            # Fallback: Manual sync via ADB synchronizer
+            if hasattr(wallet, 'adb') and wallet.adb:
+                adb = wallet.adb
+                if hasattr(adb, 'synchronizer') and adb.synchronizer:
+                    if hasattr(adb.synchronizer, 'synchronize'):
+                        adb.synchronizer.synchronize()
+                        logger.info(f"[CLTV] [SYNC] ✓ Triggered ADB synchronizer sync")
+                        
         except Exception as e:
             logger.debug(f"[CLTV] [SYNC] Could not trigger sync: {e}")
     
@@ -715,9 +713,9 @@ class Plugin(BasePlugin):
         # Get plugin storage from wallet.db
         if not hasattr(wallet, 'db'):
             raise RuntimeError(f"Wallet has no database attribute - cannot save address")
-            
-            plugin_storage = wallet.db.get_plugin_storage()
-            cltv_data = plugin_storage.get('checklocktimeverify', {})
+        
+        plugin_storage = wallet.db.get_plugin_storage()
+        cltv_data = plugin_storage.get('checklocktimeverify', {})
             
             # Initialize structure if needed
             if not cltv_data or 'addresses' not in cltv_data:
@@ -829,11 +827,8 @@ class Plugin(BasePlugin):
             if wallet in self._monitors:
                 self._monitors[wallet].add_cltv_address(address, address_data)
             
-            # Register with Electrum wallet for UTXO tracking
-            self._register_single_address_with_wallet(wallet, address)
-            
-            # Trigger immediate network sync for the new address
-            self._trigger_address_sync(wallet, address)
+            # Register with Electrum wallet for UTXO tracking (includes sync)
+            self._register_addresses_with_wallet(wallet, address=address)
             
             action = "Updated" if is_update else "Saved"
             logger.info(f"[CLTV] [STORAGE] ✓ {action} {script_type} ({len(cltv_data['addresses'])} total)")
@@ -899,7 +894,7 @@ class Plugin(BasePlugin):
                     
                     addresses.append(addr_entry)
                         
-                except Exception as regen_err:
+                except (ValueError, KeyError, TypeError) as regen_err:
                     failed_count += 1
                     import traceback
                     tb_str = traceback.format_exc()

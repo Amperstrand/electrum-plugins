@@ -18,7 +18,7 @@ Usage:
     # Result includes address, script_hex, etc.
 """
 
-from typing import Dict, Any, Literal, Union, Optional
+from typing import Dict, Any, Literal, Union, Optional, List
 
 from electrum.crypto import hash_160
 
@@ -184,17 +184,24 @@ class UnifiedContractBuilder:
         internal_key = bytes.fromhex(NUMS_H)
         builder = TaprootTreeBuilder()
         
+        # Build tree with proper DFS order and depths
+        # For N leaves, we need to calculate depths that form a valid tree structure
+        # Leaves must be added in DFS order (left-to-right, depth-first)
         if len(leaves) == 1:
             # Single leaf: depth 0 (becomes root directly)
             builder.add(depth=0, script=leaves[0], leaf_version=TAPSCRIPT_LEAF_VERSION)
         elif len(leaves) == 2:
-            # Two leaves at equal depth
+            # Two leaves at equal depth (balanced tree)
             builder.add(depth=1, script=leaves[0], leaf_version=TAPSCRIPT_LEAF_VERSION)
             builder.add(depth=1, script=leaves[1], leaf_version=TAPSCRIPT_LEAF_VERSION)
         else:
-            # More leaves - build balanced tree
-            depth = (len(leaves) - 1).bit_length()
-            for i, leaf in enumerate(leaves):
+            # For 3+ leaves: build unbalanced tree in DFS order
+            # Algorithm: Calculate depths for each leaf to form a valid tree
+            # Example for 3 leaves: [depth=2, depth=2, depth=1] (left-left, left-right, right)
+            # Example for 4 leaves: [depth=2, depth=2, depth=2, depth=2] (all at depth 2)
+            # Example for 5 leaves: [depth=3, depth=3, depth=3, depth=3, depth=2] (4 at depth 3, 1 at depth 2)
+            depths = UnifiedContractBuilder._calculate_taproot_depths(len(leaves))
+            for i, (leaf, depth) in enumerate(zip(leaves, depths)):
                 builder.add(depth=depth, script=leaf, leaf_version=TAPSCRIPT_LEAF_VERSION)
         
         output = builder.finalize(internal_key, network=network)
@@ -246,6 +253,61 @@ class UnifiedContractBuilder:
         result.update(cls._format_params_for_storage(contract, params))
         
         return result
+    
+    @staticmethod
+    def _calculate_taproot_depths(num_leaves: int) -> List[int]:
+        """
+        Calculate depths for N leaves to form a valid Taproot tree in DFS order.
+        
+        The tree must be built in DFS (depth-first search) order, meaning:
+        - All left descendants are added before right descendants
+        - Leaves at the same depth are added left-to-right
+        
+        Algorithm:
+        - For N leaves, we build the smallest complete tree that can hold them
+        - Leaves are placed at the maximum depth first, then fill upward
+        - This creates an unbalanced tree that minimizes tree height
+        
+        Examples:
+        - 1 leaf: [0] (root)
+        - 2 leaves: [1, 1] (balanced)
+        - 3 leaves: [2, 2, 1] (left subtree has 2 leaves, right has 1)
+        - 4 leaves: [2, 2, 2, 2] (all at depth 2, balanced)
+        - 5 leaves: [3, 3, 3, 3, 2] (4 at depth 3, 1 at depth 2)
+        
+        Args:
+            num_leaves: Number of leaves to place
+            
+        Returns:
+            List of depths for each leaf (in DFS order)
+        """
+        if num_leaves == 1:
+            return [0]
+        elif num_leaves == 2:
+            return [1, 1]
+        elif num_leaves == 3:
+            # Left subtree: 2 leaves at depth 2, Right subtree: 1 leaf at depth 1
+            return [2, 2, 1]
+        elif num_leaves == 4:
+            return [2, 2, 2, 2]  # All at depth 2 (balanced)
+        elif num_leaves == 5:
+            return [3, 3, 3, 3, 2]  # 4 at depth 3, 1 at depth 2
+        else:
+            # For 6+ leaves: use a more general algorithm
+            # Build left-heavy tree: fill left subtree, then right
+            # Calculate how many leaves can fit in a complete tree of depth max_depth-1
+            max_depth = (num_leaves - 1).bit_length()  # Minimum depth needed
+            leaves_at_max = 2 ** (max_depth - 1)  # Leaves in complete tree at max_depth-1
+            
+            if num_leaves <= leaves_at_max:
+                # All leaves fit at max_depth-1
+                return [max_depth - 1] * num_leaves
+            else:
+                # Some leaves at max_depth-1, rest at max_depth
+                left_count = leaves_at_max
+                right_count = num_leaves - left_count
+                return ([max_depth - 1] * left_count + 
+                       [max_depth] * right_count)
     
     @classmethod
     def _validate_params(

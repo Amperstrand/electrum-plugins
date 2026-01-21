@@ -87,7 +87,8 @@ class UnifiedCreationDialog(WindowModalDialog):
         self.witness_version_group: Optional[QButtonGroup] = None
         self.p2wsh_radio: Optional[QRadioButton] = None
         self.taproot_radio: Optional[QRadioButton] = None
-        self.locktime_edit: Optional[LockTimeEdit] = None
+        self.locktime_edit: Optional[LockTimeEdit] = None  # For backwards compatibility (single locktime)
+        self.locktime_edits: Dict[str, LockTimeEdit] = {}  # For multiple locktime parameters
         self.param_inputs: Dict[str, QWidget] = {}
         self.data_input: Optional[QTextEdit] = None
         self.data_hash_display: Optional[QLineEdit] = None
@@ -232,6 +233,7 @@ class UnifiedCreationDialog(WindowModalDialog):
         
         self.param_inputs.clear()
         self.locktime_edit = None
+        self.locktime_edits.clear()
         self.witness_version_group = None
         self.p2wsh_radio = None
         self.taproot_radio = None
@@ -299,13 +301,30 @@ class UnifiedCreationDialog(WindowModalDialog):
     def _add_locktime_input(self, param: ParamSpec):
         """Add locktime input widget."""
         default_locktime = self._get_default_locktime()
-        self.locktime_edit = LockTimeEdit(self)
-        self.locktime_edit.set_locktime(default_locktime)
-        self.locktime_edit.setToolTip(_(param.description))
+        locktime_edit = LockTimeEdit(self)
+        locktime_edit.set_locktime(default_locktime)
+        locktime_edit.setToolTip(_(param.description))
         
-        # Find key role for label
-        label = _("Locktime")
-        self.form_layout.addRow(label + ":", self.locktime_edit)
+        # Store in dict for multiple locktimes, and also set single for backwards compatibility
+        self.locktime_edits[param.name] = locktime_edit
+        if self.locktime_edit is None:
+            # First locktime: also set for backwards compatibility
+            self.locktime_edit = locktime_edit
+        
+        # Use param name as label (e.g., "Locktime (60 months)" or just "Locktime")
+        if param.name == 'locktime':
+            label = _("Locktime")
+        else:
+            # Extract meaningful part from name (e.g., "locktime_60m" -> "Locktime (60 months)")
+            label = param.name.replace('locktime_', '').replace('_', ' ').title()
+            if '60m' in param.name.lower():
+                label = _("Locktime (60 months)")
+            elif '66m' in param.name.lower():
+                label = _("Locktime (66 months)")
+            else:
+                label = param.description or param.name
+        
+        self.form_layout.addRow(label + ":", locktime_edit)
     
     def _add_pubkey_input(self, param: ParamSpec):
         """Add pubkey input with test key button."""
@@ -435,8 +454,16 @@ class UnifiedCreationDialog(WindowModalDialog):
         """Collect parameters from form inputs."""
         params = {}
         
-        # Locktime
-        if self.locktime_edit:
+        # Collect all locktime parameters
+        if self.locktime_edits:
+            # Multiple locktimes: collect all
+            for param_name, locktime_edit in self.locktime_edits.items():
+                params[param_name] = locktime_edit.get_locktime()
+            # Also set 'locktime' for backwards compatibility (use first one)
+            if 'locktime' not in params and self.locktime_edit:
+                params['locktime'] = self.locktime_edit.get_locktime()
+        elif self.locktime_edit:
+            # Single locktime: backwards compatibility
             params['locktime'] = self.locktime_edit.get_locktime()
         
         # Pubkeys and other params

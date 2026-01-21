@@ -3,7 +3,7 @@
     "fullname": "CHECKLOCKTIMEVERIFY Timelock",
     "display_name": "CHECKLOCKTIMEVERIFY Timelock",
     "description": "Create BIP-65 CLTV timelock addresses (P2WSH & Taproot) - POC Version",
-    "version": "2.1.0",
+    "version": "3.2.0",
     "author": "Amperstrand",
     "project_url": "https://github.com/Amperstrand/electrum-plugins",
     "available_for": ["qt"],
