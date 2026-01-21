@@ -14,6 +14,7 @@ Single Source of Truth:
 
 from typing import Dict
 from electrum_ecc import ECPrivkey
+from electrum.util import BitcoinException
 
 
 # Hardcoded test keys (deterministic, for POC/testing only)
@@ -85,7 +86,7 @@ def get_test_privkey(key_name: str) -> ECPrivkey:
         >>> alice_pub = alice_key.get_public_key_bytes(compressed=True)
     """
     if key_name not in TEST_KEYS:
-        raise ValueError(f"Unknown test key: {key_name}. Available: {list(TEST_KEYS.keys())}")
+        raise BitcoinException(f"Unknown test key: {key_name}. Available: {list(TEST_KEYS.keys())}")
     
     privkey_hex = TEST_KEYS[key_name]['privkey_hex']
     return ECPrivkey(bytes.fromhex(privkey_hex))
@@ -206,7 +207,7 @@ def get_test_keys_for_contract(contract_name: str) -> Dict[str, str]:
         
         contract = CONTRACTS.get(contract_name)
         if not contract:
-            raise ValueError(f"Unknown contract: {contract_name}")
+            raise BitcoinException(f"Unknown contract: {contract_name}")
         
         result = {}
         for param in contract.params:

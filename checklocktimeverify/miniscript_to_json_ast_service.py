@@ -7,6 +7,7 @@ Uses our existing Python parser and visualization AST converter.
 
 import json
 from typing import Dict, Any, Optional
+from electrum.util import BitcoinException
 from cltv_lib.miniscript.compiler import _parse_expr as parse_miniscript_expr
 from cltv_lib.miniscript.visualization_ast import (
     create_visualization_ast,
@@ -76,7 +77,7 @@ def miniscript_to_json_ast(
     try:
         miniscript_node = parse_miniscript_expr(miniscript, params)
     except Exception as e:
-        raise ValueError(f"Failed to parse Miniscript: {e}")
+        raise BitcoinException(f"Failed to parse Miniscript: {e}")
     
     # Step 2: Convert to visualization AST
     try:
@@ -85,7 +86,7 @@ def miniscript_to_json_ast(
             key_labels=key_labels_bytes
         )
     except Exception as e:
-        raise ValueError(f"Failed to create visualization AST: {e}")
+        raise BitcoinException(f"Failed to create visualization AST: {e}")
     
     # Step 3: Serialize to JSON
     return serialize_viz_ast_to_json(viz_root, nodes_by_id, miniscript, context)

@@ -15,6 +15,7 @@ from datetime import datetime
 from electrum.plugin import BasePlugin, hook
 from electrum.i18n import _
 from electrum import bitcoin
+from electrum.util import BitcoinException
 from PyQt6.QtWidgets import QLabel, QCheckBox, QSpinBox, QPushButton, QGridLayout
 from electrum.gui.qt.util import WindowModalDialog
 from electrum.gui.qt.history_list import TX_ICONS
@@ -732,7 +733,7 @@ class Plugin(BasePlugin):
                 contract = CONTRACTS.get(contract_name)
                 
                 if not contract:
-                    raise ValueError(f"Unknown contract: {contract_name} (from script_type: {script_type})")
+                    raise BitcoinException(f"Unknown contract: {contract_name} (from script_type: {script_type})")
                 
                 required_params = contract.get_required_param_names()
                 logger.info(f"[CLTV] [STORAGE] 📋 Contract requires: {required_params}")
@@ -761,13 +762,13 @@ class Plugin(BasePlugin):
                 # Validate extracted parameters
                 missing = [p for p in required_params if params.get(p) is None]
                 if missing:
-                    raise ValueError(f"Missing required parameters: {missing}. Available keys: {list(data.keys())}")
+                    raise BitcoinException(f"Missing required parameters: {missing}. Available keys: {list(data.keys())}")
                 
                 logger.info(f"[CLTV] [STORAGE] ✅ All required parameters present")
                     
             except ValueError as e:
                 # Unknown script type - cannot proceed
-                raise ValueError(f"Invalid script type: {script_type} - {e}")
+                raise BitcoinException(f"Invalid script type: {script_type} - {e}")
             
             # Validate critical parameters
             if 'locktime' in params:
@@ -1148,7 +1149,7 @@ class Plugin(BasePlugin):
                 logger.info(f"[CLTV] [SIGN] Using hardcoded test key for generator point")
         
         if privkey_hex is None:
-            raise ValueError("Private key not available for signing")
+            raise BitcoinException("Private key not available for signing")
         
         logger.info(f"[CLTV] [SIGN] 🔐 Signing {len(tx.inputs())} input(s)...")
         
@@ -1199,7 +1200,7 @@ class Plugin(BasePlugin):
                 logger.info(f"[CLTV] [KEYPAIRS] Using hardcoded test key for generator point")
         
         if privkey_hex is None:
-            raise ValueError("Private key not available for signing")
+            raise BitcoinException("Private key not available for signing")
         
         pubkey_bytes = bytes.fromhex(pubkey_hex)
         privkey_bytes = bytes.fromhex(privkey_hex)
