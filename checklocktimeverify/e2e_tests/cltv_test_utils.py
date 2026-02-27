@@ -85,7 +85,7 @@ def get_current_height():
             info = json.loads(result.stdout)
             return info.get('blockchain_height', 0)
     except Exception as e:
- print(f" Could not get height: {e}")
+        print(f" Could not get height: {e}")
     return None
 
 def fund_address(address, amount_sats):
@@ -111,7 +111,7 @@ def fund_address(address, amount_sats):
         if result.returncode == 0:
             return result.stdout.strip().strip('"')
     except Exception as e:
- print(f" Funding failed: {e}")
+        print(f" Funding failed: {e}")
     return None
 
 def get_transaction_confirmations(txid):
@@ -289,7 +289,7 @@ def wait_for_confirmation(txid, logger, min_confirmations=1, poll_interval=60):
         min_confirmations: Minimum confirmations to wait for
         poll_interval: Seconds between checks
     """
- logger.log(f"\n WAITING FOR CONFIRMATION")
+    logger.log(f"\n WAITING FOR CONFIRMATION")
     logger.log(f"  Target confirmations: {min_confirmations}")
     logger.log(f"  Polling every {poll_interval} seconds")
     logger.log(f"  ")
@@ -298,10 +298,10 @@ def wait_for_confirmation(txid, logger, min_confirmations=1, poll_interval=60):
         confirmations = get_transaction_confirmations(txid)
         
         if confirmations >= min_confirmations:
- logger.log(f" Confirmed! ({confirmations} confirmation{'s' if confirmations != 1 else ''})")
+            logger.log(f" Confirmed! ({confirmations} confirmation{'s' if confirmations != 1 else ''})")
             break
         
- logger.log(f" {confirmations} confirmation{'s' if confirmations != 1 else ''}... waiting {poll_interval}s")
+        logger.log(f" {confirmations} confirmation{'s' if confirmations != 1 else ''}... waiting {poll_interval}s")
         time.sleep(poll_interval)
 
 def wait_for_locktime(locktime, logger, poll_interval=60):
@@ -313,7 +313,7 @@ def wait_for_locktime(locktime, logger, poll_interval=60):
         logger: Logger instance
         poll_interval: Seconds between checks
     """
- logger.log(f"\n WAITING FOR LOCKTIME TO PASS")
+    logger.log(f"\n WAITING FOR LOCKTIME TO PASS")
     logger.log(f"  Target height: {locktime}")
     logger.log(f"  Polling every {poll_interval} seconds")
     logger.log(f"  ")
@@ -321,18 +321,18 @@ def wait_for_locktime(locktime, logger, poll_interval=60):
     while True:
         current = get_current_height()
         if not current:
- logger.log(f" Could not get height, retrying...")
+            logger.log(f" Could not get height, retrying...")
             time.sleep(poll_interval)
             continue
         
         remaining = locktime - current
         
         if remaining <= 0:
- logger.log(f" Locktime passed! (height {current} >= {locktime})")
+            logger.log(f" Locktime passed! (height {current} >= {locktime})")
             break
         
         eta_minutes = remaining * 10  # ~10 min per block
- logger.log(f" Height {current} | {remaining} blocks to go | ~{eta_minutes} min")
+        logger.log(f" Height {current} | {remaining} blocks to go | ~{eta_minutes} min")
         time.sleep(poll_interval)
     
     return current
@@ -410,25 +410,25 @@ def print_test_summary(logger, test_type, metadata):
     premature = attempts[0]
     valid = attempts[-1]
     
- logger.log("\n SWEEP PHASE COMPLETE")
- logger.log(" FULL TEST CYCLE COMPLETE - ALL PHASES SUCCESSFUL")
+    logger.log("\n SWEEP PHASE COMPLETE")
+    logger.log(" FULL TEST CYCLE COMPLETE - ALL PHASES SUCCESSFUL")
     logger.log("")
     logger.log("TEST SUMMARY:")
     logger.log("┌" + "─" * 78 + "┐")
     logger.log("│ Phase                    │ Status  │ Details                             │")
     logger.log("├" + "─" * 78 + "┤")
- logger.log(f"│ Lock (Address Creation) │ PASS │ Address funded at block {metadata['current_height']:<11} │")
- logger.log(f"│ Premature Sweep │ PASS │ Correctly rejected (non-final) │")
- logger.log(f"│ Valid Sweep │ PASS │ Successfully broadcast │")
+    logger.log(f"│ Lock (Address Creation) │ PASS │ Address funded at block {metadata['current_height']:<11} │")
+    logger.log(f"│ Premature Sweep │ PASS │ Correctly rejected (non-final) │")
+    logger.log(f"│ Valid Sweep │ PASS │ Successfully broadcast │")
     logger.log("└" + "─" * 78 + "┘")
     logger.log("")
     logger.log("PROOF OF CORRECTNESS:")
- logger.log(f" CLTV {test_type.upper()} script constructed correctly")
- logger.log(f" Address generation works")
- logger.log(f" Locktime enforcement validated (premature @ {premature['height']}, valid @ {valid['height']})")
- logger.log(f" Successful spend after locktime")
- logger.log(f" Signature validation passed")
- logger.log(f" Transaction confirmed on blockchain")
+    logger.log(f" CLTV {test_type.upper()} script constructed correctly")
+    logger.log(f" Address generation works")
+    logger.log(f" Locktime enforcement validated (premature @ {premature['height']}, valid @ {valid['height']})")
+    logger.log(f" Successful spend after locktime")
+    logger.log(f" Signature validation passed")
+    logger.log(f" Transaction confirmed on blockchain")
     logger.log("")
     logger.log(f"TRANSACTIONS:")
     logger.log(f"  Funding: {metadata['funding_txid']}")

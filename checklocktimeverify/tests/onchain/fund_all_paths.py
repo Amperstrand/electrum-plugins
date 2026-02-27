@@ -65,12 +65,12 @@ def ensure_daemon():
         # Common message when daemon is already running
         if 'already running' in stderr.lower() or 'lockfile detected' in stderr.lower():
             return True
- print(' Starting daemon (fallback)...')
+        print(' Starting daemon (fallback)...')
         proc2 = subprocess.run([ELECTRUM_CLI, '--signet', 'daemon', '-d'], capture_output=True, text=True)
         if proc2.returncode == 0:
             time.sleep(1)
             return True
- print(f" Daemon start failed: {proc2.stderr.strip()}")
+        print(f" Daemon start failed: {proc2.stderr.strip()}")
     except Exception:
         pass
     # If we couldn't start but electrum CLI returns info, consider daemon responsive
@@ -100,10 +100,10 @@ def parse_confirmations_output(text: str):
 def poll_confirmations(state, max_wait=60, interval=5):
     txid = state.get('funding_txid')
     if not txid:
- print(' No funding_txid recorded.')
+        print(' No funding_txid recorded.')
         return None
     if not ensure_daemon():
- print(' Daemon unavailable; cannot poll.')
+        print(' Daemon unavailable; cannot poll.')
         return None
     elapsed = 0
     confirmations = None
@@ -114,11 +114,11 @@ def poll_confirmations(state, max_wait=60, interval=5):
             if confirmations is not None:
                 state['confirmations'] = confirmations
                 STATE_FILE.write_text(json.dumps(state, indent=2))
- print(f" {txid} confirmations={confirmations}")
+                print(f" {txid} confirmations={confirmations}")
                 if confirmations >= 1:
                     break
         else:
- print(f" get_tx_status failed: {res.stderr.strip()}")
+            print(f" get_tx_status failed: {res.stderr.strip()}")
         time.sleep(interval)
         elapsed += interval
     return confirmations
@@ -132,7 +132,7 @@ def build_all_path_outputs():
     result = build_contract('hodl', {'locktime': locktime, 'pubkey': get_test_pubkey('hodl')}, 'p2wsh', 'signet')
     addr_simple = result['address']
     outputs.append({'script_id': 'cltv_hodl_p2wsh', 'address': addr_simple, 'lockheight': locktime, 'path_name': 'after_locktime'})
- 
+    
     # 2. Escrow (now always 3-party)
     result_e3 = build_contract('escrow', {
         'locktime': locktime,
@@ -154,7 +154,7 @@ def build_all_path_outputs():
     addr_pc = result_pc['address']
     outputs.append({'script_id': 'cltv_payment_channel_p2wsh', 'address': addr_pc, 'lockheight': locktime, 'path_name': 'cooperative'})
     outputs.append({'script_id': 'cltv_payment_channel_p2wsh', 'address': addr_pc, 'lockheight': locktime, 'path_name': 'refund'})
- 
+    
     # 5. Two-Factor
     result_tf = build_contract('twofactor', {
         'locktime': locktime,
@@ -164,7 +164,7 @@ def build_all_path_outputs():
     addr_tf = result_tf['address']
     outputs.append({'script_id': 'cltv_twofactor_p2wsh', 'address': addr_tf, 'lockheight': locktime, 'path_name': 'normal'})
     outputs.append({'script_id': 'cltv_twofactor_p2wsh', 'address': addr_tf, 'lockheight': locktime, 'path_name': 'recovery'})
- 
+    
     # 6. Data Publishing
     import hashlib
     data_preimage = b'secret_data'
@@ -203,27 +203,27 @@ def load_state():
 def fund_rpc(outputs, wallet_path=None):
     wallet_path = os.path.expanduser(wallet_path or DEFAULT_WALLET)
     if not os.path.exists(wallet_path):
- print(f" Wallet not found: {wallet_path}")
+        print(f" Wallet not found: {wallet_path}")
         return None
     if not ensure_daemon():
         return None
     outputs_json = json.dumps([[o['address'], btc_amt(AMOUNT_SATS)] for o in outputs])
- print(f"\n paytomany outputs JSON: {outputs_json}")
+    print(f"\n paytomany outputs JSON: {outputs_json}")
     pay = subprocess.run([ELECTRUM_CLI, '--signet', '-w', wallet_path, 'paytomany', outputs_json, '--addtransaction'], capture_output=True, text=True)
     if pay.returncode != 0:
- print(f" paytomany failed: {pay.stderr.strip()}")
+        print(f" paytomany failed: {pay.stderr.strip()}")
         return None
     raw_tx = pay.stdout.strip().splitlines()[-1]
     if len(raw_tx) < 40:
- print(f" Unexpected paytomany output: {pay.stdout}")
+        print(f" Unexpected paytomany output: {pay.stdout}")
         return None
     bcast = subprocess.run([ELECTRUM_CLI, '--signet', 'broadcast', raw_tx], capture_output=True, text=True)
     if bcast.returncode != 0:
- print(f" Broadcast failed: {bcast.stderr.strip()}")
+        print(f" Broadcast failed: {bcast.stderr.strip()}")
         return None
     txid_candidates = [tok for tok in bcast.stdout.split() if len(tok) == 64 and all(c in '0123456789abcdef' for c in tok.lower())]
     txid = txid_candidates[-1] if txid_candidates else bcast.stdout.strip()[-64:]
- print(f" Broadcast TXID: {txid}")
+    print(f" Broadcast TXID: {txid}")
     return txid
 
 def annotate_vouts(outputs, txid):
@@ -237,7 +237,7 @@ def annotate_vouts(outputs, txid):
 def show_status():
     state = load_state()
     if not state:
- print(' No state. Run --create.')
+        print(' No state. Run --create.')
         return
     print('='*72)
     print('FUND ALL PATHS STATUS')
@@ -278,7 +278,7 @@ def main():
             outputs = build_all_path_outputs()
             state = save_state(outputs)
         if state['status'] == 'FUNDED':
- print(' Already funded.')
+            print(' Already funded.')
         else:
             txid = fund_rpc(state['outputs'], args.wallet)
             if txid:
@@ -289,9 +289,9 @@ def main():
     if args.confirm:
         state = load_state()
         if not state:
- print(' No state file.')
+            print(' No state file.')
         elif state['status'] != 'FUNDED':
- print(' Not funded yet.')
+            print(' Not funded yet.')
         else:
             poll_confirmations(state)
     if not (args.create or args.fund or args.status or args.confirm):

@@ -40,7 +40,7 @@ def fund_address_via_electrum(
         )
         
         if result.returncode != 0:
- print(f" Payment failed: {result.stderr}")
+            print(f" Payment failed: {result.stderr}")
             return None
             
         # Get transaction details to find vout
@@ -54,17 +54,17 @@ def fund_address_via_electrum(
                 break
                 
         if vout is None:
- print(f" Could not find vout for {address}")
+            print(f" Could not find vout for {address}")
             return None
             
         txid = tx_data.get('txid')
         return (txid, vout)
         
     except subprocess.TimeoutExpired:
- print(f" Payment timed out")
+        print(f" Payment timed out")
         return None
     except Exception as e:
- print(f" Funding error: {e}")
+        print(f" Funding error: {e}")
         return None
 
 
@@ -415,7 +415,7 @@ def is_output_locked(locktime: int, current_height: int) -> Tuple[bool, int]:
 def log_test_info(test_name: str, test_data: Dict, current_height: int, spend_path: str = "N/A"):
     """Print comprehensive test information with Miniscript/descriptor if available."""
     print(f"\n{'='*80}")
- print(f" TEST #{test_data.get('test_number', '?')}: {test_name}")
+    print(f" TEST #{test_data.get('test_number', '?')}: {test_name}")
     print(f"{'='*80}")
     print(f"Status:           {test_data.get('status', 'UNKNOWN')}")
     print(f"Test Number:      {test_data.get('test_number', 'N/A')}")

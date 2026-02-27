@@ -160,9 +160,9 @@ def wipe_state(locktime: int):
     state_file = Path(__file__).parent / f"test_state_{locktime}.json"
     if state_file.exists():
         state_file.unlink()
- print(f" Deleted {state_file.name}")
+        print(f" Deleted {state_file.name}")
     else:
- print(f" No state file to delete")
+        print(f" No state file to delete")
 
 
 def generate_all_tests(state: StateManager, locktime: int, current_height: int) -> List[Dict]:
@@ -172,7 +172,7 @@ def generate_all_tests(state: StateManager, locktime: int, current_height: int) 
     SINGLE SOURCE OF TRUTH: Iterates over CONTRACTS and their paths.
     """
     print("\n" + "="*80)
- print(" GENERATING TEST ADDRESSES FROM SINGLE SOURCE OF TRUTH")
+    print(" GENERATING TEST ADDRESSES FROM SINGLE SOURCE OF TRUTH")
     print("="*80)
     
     tests = []
@@ -180,7 +180,7 @@ def generate_all_tests(state: StateManager, locktime: int, current_height: int) 
     
     # Iterate over all contracts
     for contract_name, contract in CONTRACTS.items():
- print(f"\n {contract.name} ({len(contract.paths)} paths)")
+        print(f"\n {contract.name} ({len(contract.paths)} paths)")
         
         # Get params and keys for this contract
         params, keys, data_preimage, data_hash = get_test_data_for_contract(contract, locktime)
@@ -215,18 +215,18 @@ def generate_all_tests(state: StateManager, locktime: int, current_height: int) 
                     state.add_test(category, output_type, test_data)
                     tests.append((contract_name, output_type, path_name, test_data))
                     
- icon = "" if path.requires_locktime else ""
+                    icon = "" if path.requires_locktime else ""
                     print(f"   {icon} #{test_number:2d}. {output_type:7} {path_name:20} {test_data['address'][:25]}...")
                     test_number += 1
                     
                 except Exception as e:
- print(f" {output_type} {path_name}: {e}")
+                    print(f" {output_type} {path_name}: {e}")
     
     state.save()
     
     # Summary
     print("\n" + "-"*80)
- print(f" Generated {len(tests)} test addresses:")
+    print(f" Generated {len(tests)} test addresses:")
     print(f"   • {len(CONTRACTS)} contracts")
     print(f"   • {len(OUTPUT_TYPES)} output types (P2WSH, Taproot)")
     total_paths = sum(len(c.paths) for c in CONTRACTS.values())
@@ -240,13 +240,13 @@ def fund_all_tests(state: StateManager, dry_run: bool = False) -> Optional[str]:
     from fund_tests import get_unfunded_tests, print_funding_summary, create_funding_transaction, update_state_with_funding
     
     print("\n" + "="*80)
- print(" FUNDING TEST ADDRESSES")
+    print(" FUNDING TEST ADDRESSES")
     print("="*80)
     
     unfunded = get_unfunded_tests(state)
     
     if not unfunded:
- print("\n All tests already funded!")
+        print("\n All tests already funded!")
         return None
     
     outputs_by_address, total_sats = print_funding_summary(unfunded)
@@ -259,7 +259,7 @@ def fund_all_tests(state: StateManager, dry_run: bool = False) -> Optional[str]:
     
     if txid:
         update_state_with_funding(state, unfunded, txid, outputs_by_address)
- print(f"\n Funding TX broadcast: {txid}")
+        print(f"\n Funding TX broadcast: {txid}")
         print(f"   Explorer: {get_explorer_url(txid)}")
     
     return txid
@@ -272,7 +272,7 @@ def sweep_all_tests(state: StateManager, current_height: int, dry_run: bool = Fa
     SINGLE SOURCE OF TRUTH: Uses SpendingPath.requires_locktime to check if sweep is possible.
     """
     print("\n" + "="*80)
- print(" SWEEPING FUNDED TESTS")
+    print(" SWEEPING FUNDED TESTS")
     print("="*80)
     
     sweep_txids = []
@@ -304,7 +304,7 @@ def sweep_all_tests(state: StateManager, current_height: int, dry_run: bool = Fa
                     skipped_locked.append((test['test_number'], contract_name, path_name, blocks_remaining))
                     continue
                 
- icon = "" if not requires_locktime else ""
+                icon = "" if not requires_locktime else ""
                 print(f"\n{icon} #{test['test_number']} - {contract_name} {variant} ({path_name})")
                 
                 if dry_run:
@@ -322,22 +322,22 @@ def sweep_all_tests(state: StateManager, current_height: int, dry_run: bool = Fa
                     )
                     
                     if sweep_txid:
- print(f" Swept: {sweep_txid[:16]}...")
+                        print(f" Swept: {sweep_txid[:16]}...")
                         test['status'] = 'SWEPT'
                         test['sweep_txid'] = sweep_txid
                         state.save()
                         sweep_txids.append(sweep_txid)
                     else:
- print(f" Sweep returned None")
+                        print(f" Sweep returned None")
                         
                 except Exception as e:
- print(f" Sweep failed: {e}")
+                    print(f" Sweep failed: {e}")
                     import traceback
                     traceback.print_exc()
     
     # Report skipped locked tests
     if skipped_locked:
- print(f"\n Skipped {len(skipped_locked)} locked tests (require locktime):")
+        print(f"\n Skipped {len(skipped_locked)} locked tests (require locktime):")
         for test_num, contract, path, blocks in skipped_locked:
             print(f"   #{test_num} {contract} {path}: {blocks} blocks remaining")
     
@@ -347,13 +347,13 @@ def sweep_all_tests(state: StateManager, current_height: int, dry_run: bool = Fa
 def print_summary(tests: List, sweep_txids: List[str], current_height: int, locktime: int):
     """Print final summary with contract/path matrix."""
     print("\n" + "="*80)
- print(" TEST MATRIX (Single Source of Truth)")
+    print(" TEST MATRIX (Single Source of Truth)")
     print("="*80)
     
     for contract_name, contract in CONTRACTS.items():
         print(f"\n{contract.icon} {contract.name}:")
         for path in contract.paths:
- lock_icon = "" if path.requires_locktime else ""
+            lock_icon = "" if path.requires_locktime else ""
             keys_str = "+".join(path.required_keys)
             print(f"   {lock_icon} {path.name:20} Keys: {keys_str}")
     
@@ -374,7 +374,7 @@ def main():
     args = parser.parse_args()
     
     print("="*80)
- print(" FULL E2E TEST RUNNER - ALL CONTRACTS & PATHS")
+    print(" FULL E2E TEST RUNNER - ALL CONTRACTS & PATHS")
     print("="*80)
     print(f"Network: {NETWORK_NAME}")
     print(f"Time: {datetime.now().isoformat()}")
@@ -417,7 +417,7 @@ def main():
     if existing_tests == 0:
         tests = generate_all_tests(state, locktime, current_height)
     else:
- print(f"\n Found {existing_tests} existing tests in state")
+        print(f"\n Found {existing_tests} existing tests in state")
         tests = []
     
     # Fund
@@ -431,7 +431,7 @@ def main():
         
         if sweep_txids:
             print("\n" + "="*80)
- print(" E2E TEST COMPLETE")
+            print(" E2E TEST COMPLETE")
             print("="*80)
             print(f"Swept {len(sweep_txids)} transactions:")
             for txid in sweep_txids:
@@ -439,7 +439,7 @@ def main():
     
     # Final summary
     print_summary(tests, sweep_txids, current_height, locktime)
- print("\n Done!")
+    print("\n Done!")
 
 
 if __name__ == '__main__':

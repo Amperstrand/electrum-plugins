@@ -296,7 +296,7 @@ class MiniscriptVisualizerDialog(WindowModalDialog):
             for path_name, leaf_ms, leaf_viz_root, leaf_nodes_by_id in self.all_leaves:
                 # Create a parent item for this path
                 path_item = QTreeWidgetItem()
- path_item.setText(0, f" {path_name}")
+                path_item.setText(0, f" {path_name}")
                 path_item.setData(0, Qt.ItemDataRole.UserRole, None)  # No node ID for path header
                 path_item.setExpanded(True)
                 
@@ -666,17 +666,17 @@ class MiniscriptVisualizerDialog(WindowModalDialog):
     def _get_icon_for_type(self, node_type: NodeType) -> str:
         """Get icon/emoji for node type."""
         icons = {
- NodeType.AND: "",
- NodeType.OR: "",
- NodeType.THRESH: "",
- NodeType.ANDOR: "",
- NodeType.SIGNATURE: "",
- NodeType.MULTISIG: "",
- NodeType.TIMELOCK_ABSOLUTE: "",
- NodeType.TIMELOCK_RELATIVE: "",
- NodeType.HASHLOCK: "#⃣",
- NodeType.CONSTANT_TRUE: "",
- NodeType.CONSTANT_FALSE: "",
+            NodeType.AND: "",
+            NodeType.OR: "",
+            NodeType.THRESH: "",
+            NodeType.ANDOR: "",
+            NodeType.SIGNATURE: "",
+            NodeType.MULTISIG: "",
+            NodeType.TIMELOCK_ABSOLUTE: "",
+            NodeType.TIMELOCK_RELATIVE: "",
+            NodeType.HASHLOCK: "#⃣",
+            NodeType.CONSTANT_TRUE: "",
+            NodeType.CONSTANT_FALSE: "",
         }
         return icons.get(node_type, "•")
     
@@ -842,13 +842,13 @@ class MiniscriptVisualizerDialog(WindowModalDialog):
         # Update status label
         if is_satisfied:
             self.status_label.setText(
- _(" <b>Spendable!</b><br/>"
+                _(" <b>Spendable!</b><br/>"
                   "All required conditions are satisfied. This UTXO can be spent.")
             )
             self.status_label.setStyleSheet("color: green; font-size: 14px; padding: 12px;")
         else:
             self.status_label.setText(
- _(" <b>Not yet spendable</b><br/>"
+                _(" <b>Not yet spendable</b><br/>"
                   "Some required conditions are not satisfied. Check which signatures "
                   "or timelocks are missing.")
             )
@@ -885,10 +885,10 @@ class MiniscriptVisualizerDialog(WindowModalDialog):
         
         if node.satisfied is not None:
             if node.satisfied:
- status_icon = "" if node.relevant else ""
+                status_icon = "" if node.relevant else ""
                 color = "green" if node.relevant else "#888"
             else:
- status_icon = "" if node.relevant else ""
+                status_icon = "" if node.relevant else ""
                 color = "red" if node.relevant else "#ccc"
             
             full_label = f"{status_icon} {icon} {label}"

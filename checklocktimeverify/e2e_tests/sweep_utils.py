@@ -103,7 +103,7 @@ def sweep_funded_output(
     
     # 0. Print comprehensive debugging information
     print(f"\n{'='*80}")
- print(f" SWEEP DEBUGGING INFO")
+    print(f" SWEEP DEBUGGING INFO")
     print(f"{'='*80}")
     print(f"Test Number: {test_data.get('test_number', 'N/A')}")
     print(f"Script Type: {test_data.get('script_type', 'N/A')}")
@@ -321,7 +321,7 @@ def sweep_funded_output(
     # Use dynamic fee if it's higher than the provided fee_sats
     dynamic_fee = max(fee_sats, vsize + 10)  # +10 for safety margin
     if dynamic_fee > fee_sats:
- print(f" Dynamic fee: {dynamic_fee} sats (script size: {script_size} bytes, vsize: ~{vsize})")
+        print(f" Dynamic fee: {dynamic_fee} sats (script size: {script_size} bytes, vsize: ~{vsize})")
         fee_sats = dynamic_fee
     
     output_amount = input_amount - fee_sats
@@ -399,7 +399,7 @@ def sweep_funded_output(
         if isinstance(destination_address, tuple) and destination_address[0] == 'op_return':
             # OP_RETURN output
             op_return_data = destination_address[1]  # hex string
- print(f" Creating OP_RETURN output with data: {bytes.fromhex(op_return_data).decode('utf-8', errors='ignore')}")
+            print(f" Creating OP_RETURN output with data: {bytes.fromhex(op_return_data).decode('utf-8', errors='ignore')}")
             
             # Build OP_RETURN scriptPubKey
             import electrum.bitcoin as bitcoin
@@ -413,7 +413,7 @@ def sweep_funded_output(
             )
             
             # Note: Fees will be higher since all input goes to fees
- print(f" OP_RETURN: All {input_amount} sats will be consumed as fees")
+            print(f" OP_RETURN: All {input_amount} sats will be consumed as fees")
         else:
             # Regular address output
             tx_output = PartialTxOutput.from_address_and_value(
@@ -437,9 +437,9 @@ def sweep_funded_output(
         # Check if this is Taproot
         # Note: get_format returns uppercase string ("TAPROOT"), but ScriptFormat uses lowercase
         is_taproot = script_format.upper() == "TAPROOT" if isinstance(script_format, str) else script_format == ScriptFormat.TAPROOT
- print(f" Script format: {script_format}, is_taproot: {is_taproot}")
+        print(f" Script format: {script_format}, is_taproot: {is_taproot}")
         if is_taproot:
- print(f" Taking Taproot code path")
+            print(f" Taking Taproot code path")
             # Use our consolidated BIP-341 sighash computation from cltv_lib
             from cltv_lib.builders.taproot import compute_bip341_sighash
             # Note: compute_tapleaf_hash is in taproot_utils
@@ -488,7 +488,7 @@ def sweep_funded_output(
             script_hex_for_sighash = output_data['script_hex']
             script_bytes_for_sighash = bytes.fromhex(script_hex_for_sighash)
             
- print(f" Taproot sighash params (EXPERT DEBUG):")
+            print(f" Taproot sighash params (EXPERT DEBUG):")
             print(f"      funding_txid: {input_txid}")
             print(f"      funding_vout: {input_vout}")
             print(f"      amount_sats: {input_amount}")
@@ -499,7 +499,7 @@ def sweep_funded_output(
             print(f"      dest_address: {dest_for_sighash}")
             print(f"      locktime: {tx_locktime}")
             print(f"      fee_sats: {fee_sats}")
- print(f" VERIFY: This script MUST match the script in the witness!")
+            print(f" VERIFY: This script MUST match the script in the witness!")
             
             sighash = compute_bip341_sighash(
                 funding_txid=input_txid,
@@ -512,7 +512,7 @@ def sweep_funded_output(
                 locktime=tx_locktime,
                 fee_sats=fee_sats
             )
- print(f" Sighash digest: {sighash.hex()}")
+            print(f" Sighash digest: {sighash.hex()}")
             print(f"      Sighash length: {len(sighash)} bytes (should be 32)")
         else:
             # Compute BIP-143 sighash manually for P2WSH
@@ -561,7 +561,7 @@ def sweep_funded_output(
                 # Already bytes or bytes-like
                 txid_bytes = bytes(txin.prevout.txid)
             outpoint = txid_bytes[::-1] + txin.prevout.out_idx.to_bytes(4, 'little')
- print(f" Outpoint computation:")
+            print(f" Outpoint computation:")
             print(f"      txid type: {type(txin.prevout.txid)}")
             if hasattr(txin.prevout.txid, 'hex'):
                 print(f"      txid (hex): {txin.prevout.txid.hex()}")
@@ -575,7 +575,7 @@ def sweep_funded_output(
             # 5. scriptCode - for P2WSH, it's the witness script
             # For BIP-143, scriptCode = length prefix + script
             # CRITICAL: This MUST exactly match the script that will be in the witness stack
- print(f" BIP-143 scriptCode computation:")
+            print(f" BIP-143 scriptCode computation:")
             print(f"      Script length: {len(script_bytes)} bytes")
             print(f"      Script hex: {script_hex[:80]}...")
             print(f"      Script first byte: 0x{script_bytes[0]:02x} (should be OP_IF = 0x63)")
@@ -590,7 +590,7 @@ def sweep_funded_output(
             
             print(f"      ScriptCode length prefix: 0x{scriptCode[0]:02x} ({scriptCode[0]} bytes)")
             print(f"      ScriptCode hex: {scriptCode.hex()[:80]}...")
- print(f" VERIFY: This scriptCode MUST match the witnessScript in the witness!")
+            print(f" VERIFY: This scriptCode MUST match the witnessScript in the witness!")
             
             # 6. value (8 bytes, little-endian)
             # NOTE: Bitcoin Core uses signed=True, but for BIP-143 we use unsigned
@@ -624,7 +624,7 @@ def sweep_funded_output(
                     # 0xff + 8-byte length (little-endian) - extremely rare
                     outputs_preimage += b'\xff' + spk_len.to_bytes(8, 'little') + spk
             hashOutputs = sha256d(outputs_preimage)
- print(f" hashOutputs computation:")
+            print(f" hashOutputs computation:")
             print(f"      Number of outputs: {len(tx.outputs())}")
             for i, txout in enumerate(tx.outputs()):
                 print(f"      Output {i}: value={txout.value} sats, spk_len={len(txout.scriptpubkey)} bytes")
@@ -651,8 +651,8 @@ def sweep_funded_output(
             )
             
             sighash = sha256d(preimage)
- print(f" Using manual BIP-143 sighash for P2WSH")
- print(f" BIP-143 sighash preimage components:")
+            print(f" Using manual BIP-143 sighash for P2WSH")
+            print(f" BIP-143 sighash preimage components:")
             print(f"      nVersion: {version.hex()}")
             print(f"      hashPrevouts: {hashPrevouts.hex()[:32]}...")
             print(f"      hashSequence: {hashSequence.hex()[:32]}...")
@@ -663,7 +663,7 @@ def sweep_funded_output(
             print(f"      hashOutputs: {hashOutputs.hex()[:32]}...")
             print(f"      nLocktime: {nLocktime.hex()} ({tx_locktime})")
             print(f"      sighash_type: {sighash_type.hex()} (SIGHASH_ALL = 1)")
- print(f" Final sighash: {sighash.hex()}")
+            print(f" Final sighash: {sighash.hex()}")
             
     except Exception as e:
         raise SweepError(f"Failed to compute sighash: {e}") from e
@@ -671,12 +671,12 @@ def sweep_funded_output(
     # 7. Build witness using sweeper (handles signing internally)
     try:
         # Pass path_kwargs to build_witness for path-aware sweepers
- print(f" Building witness with:")
+        print(f" Building witness with:")
         print(f"      script_hex: {output_data.get('script_hex', 'N/A')[:80]}...")
         print(f"      sighash: {sighash.hex()[:32]}...")
         print(f"      path_kwargs: {path_kwargs}")
         witness = sweeper.build_witness(output_data, keys, sighash, **path_kwargs)
- print(f" Witness built: {len(witness)} items")
+        print(f" Witness built: {len(witness)} items")
         for i, item in enumerate(witness):
             if isinstance(item, bytes):
                 print(f"      Item {i}: {len(item)} bytes - {item.hex()[:40]}...")
@@ -695,23 +695,23 @@ def sweep_funded_output(
                 witness_script = witness[-1] if isinstance(witness[-1], bytes) else None
             
             if witness_script:
- print(f" Witness script: {witness_script.hex()[:80]}...")
+                print(f" Witness script: {witness_script.hex()[:80]}...")
                 print(f"      Length: {len(witness_script)} bytes")
                 print(f"      First byte: 0x{witness_script[0]:02x}")
                 if witness_script == script_bytes:
- print(f" Witness script matches scriptCode script!")
+                    print(f" Witness script matches scriptCode script!")
                 else:
- print(f" WARNING: Witness script does NOT match scriptCode script!")
+                    print(f" WARNING: Witness script does NOT match scriptCode script!")
                     print(f"         scriptCode script: {script_bytes.hex()[:80]}...")
                     print(f"         witness script:    {witness_script.hex()[:80]}...")
- print(f" Witness from sweeper: {len(witness)} items")
+        print(f" Witness from sweeper: {len(witness)} items")
         for i, item in enumerate(witness):
             if isinstance(item, int):
- print(f" Witness item {i}: integer {item}")
+                print(f" Witness item {i}: integer {item}")
             elif isinstance(item, bytes):
- print(f" Witness item {i}: {len(item)} bytes - {item.hex()[:64]}...")
+                print(f" Witness item {i}: {len(item)} bytes - {item.hex()[:64]}...")
             else:
- print(f" Witness item {i}: {type(item)}")
+                print(f" Witness item {i}: {type(item)}")
     except Exception as e:
         raise SweepError(f"Failed to build witness: {e}") from e
     
@@ -724,23 +724,23 @@ def sweep_funded_output(
             # Check if witness is already constructed (bytes) or needs construction (list)
             if isinstance(witness, bytes):
                 # Witness is already constructed by sweeper
- print(f" Witness already constructed: {len(witness)} bytes - {witness.hex()[:64]}...")
+                print(f" Witness already constructed: {len(witness)} bytes - {witness.hex()[:64]}...")
                 tx_input.witness = witness
             else:
                 # Witness is a list of items, need to construct it
- print(f" Witness before construct_witness: {len(witness)} items")
+                print(f" Witness before construct_witness: {len(witness)} items")
                 for i, item in enumerate(witness):
                     if isinstance(item, int):
- print(f" Witness item {i}: integer {item}")
+                        print(f" Witness item {i}: integer {item}")
                     elif isinstance(item, bytes):
- print(f" Witness item {i}: {len(item)} bytes - {item.hex()[:32]}...")
+                        print(f" Witness item {i}: {len(item)} bytes - {item.hex()[:32]}...")
                     else:
- print(f" Witness item {i}: {type(item)}")
+                        print(f" Witness item {i}: {type(item)}")
                 
                 # Use Electrum's construct_witness to properly format the witness
                 from electrum.bitcoin import construct_witness
                 constructed_witness = construct_witness(witness)
- print(f" Constructed witness: {len(constructed_witness)} bytes - {constructed_witness.hex()[:64]}...")
+                print(f" Constructed witness: {len(constructed_witness)} bytes - {constructed_witness.hex()[:64]}...")
                 
                 tx_input.witness = constructed_witness
             
@@ -767,10 +767,10 @@ def sweep_funded_output(
             tx_hex = tx_bytes_fixed.hex()
             
             # Transaction successfully created with correct nLockTime
- print(f" Fixed nLockTime: {tx_locktime}")
+            print(f" Fixed nLockTime: {tx_locktime}")
             
         except Exception as e:
- print(f" Failed to fix nLockTime: {e}")
+            print(f" Failed to fix nLockTime: {e}")
             # Continue with original transaction hex
         
     except Exception as e:
@@ -798,21 +798,21 @@ def sweep_funded_output(
             if "bad-txns-inputs-missingorspent" in result.stderr or "Witness program hash mismatch" in result.stderr:
                 error_type = "UTXO ERROR" if "bad-txns-inputs-missingorspent" in result.stderr else "WITNESS HASH MISMATCH"
                 print(f"\n" + "="*80)
- print(f" {error_type} DETECTED - RAW TRANSACTION HEX")
+                print(f" {error_type} DETECTED - RAW TRANSACTION HEX")
                 print(f"="*80)
                 print(f"Raw TX: {tx_hex}")
                 print(f"="*80)
- print(f" You can push this transaction manually at:")
+                print(f" You can push this transaction manually at:")
                 print(f"https://mempool.space/testnet/pushtx")
- print(f"\n Error details: {result.stderr}")
+                print(f"\n Error details: {result.stderr}")
                 if "bad-txns-inputs-missingorspent" in result.stderr:
- print(f"\n This might be due to UTXO conflicts or double-spending attempts.")
+                    print(f"\n This might be due to UTXO conflicts or double-spending attempts.")
                 elif "Witness program hash mismatch" in result.stderr:
- print(f"\n This might be due to script hash mismatch - check script generation.")
+                    print(f"\n This might be due to script hash mismatch - check script generation.")
                 print(f"="*80)
                 
                 # Additional debugging info
- print(f"\n DEBUGGING INFO:")
+                print(f"\n DEBUGGING INFO:")
                 print(f"   UTXO: {test_data.get('funding_txid', 'N/A')}:{test_data.get('funding_vout', 'N/A')}")
                 print(f"   Amount: {test_data.get('amount_sats', 'N/A')} sats")
                 print(f"   Address: {test_data.get('address', 'N/A')}")

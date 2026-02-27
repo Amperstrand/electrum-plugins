@@ -108,7 +108,7 @@ class SpendingPath:
     
     # UI metadata for this path
     # Default icon keeps backwards compatibility for older definitions
- icon: str = ""
+    icon: str = ""
     
     @property
     def is_if_branch(self) -> bool:
@@ -126,7 +126,7 @@ class KeyRole:
     name: str                    # Internal name: 'alice', 'sender', 'publisher'
     display_name: str            # UI label: 'Alice (Party A)'
     description: str             # Help text: 'The first party to the escrow'
- icon: str = '' # Icon for UI
+    icon: str = '' # Icon for UI
 
 
 @dataclass
@@ -167,7 +167,7 @@ class ContractDefinition:
     bip_reference: str = ''
     short_description: str = ''
     use_cases: List[str] = field(default_factory=list)
- icon: str = ''
+    icon: str = ''
     
     # NEW: Spending paths (for UI buttons and sweep logic)
     paths: List[SpendingPath] = field(default_factory=list)

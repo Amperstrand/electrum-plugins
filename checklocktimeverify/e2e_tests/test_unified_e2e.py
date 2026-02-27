@@ -54,7 +54,7 @@ from broadcast_utils import broadcast_transaction, get_explorer_url
 
 def handle_funded_test(test_data: dict, state: StateManager, current_height: int):
     """Handle a test that is already funded - attempt to sweep."""
- print(f"\n Test already funded!")
+    print(f"\n Test already funded!")
     print(f"   Funding TX: {test_data.get('funding_txid')}")
     print(f"   Amount: {test_data.get('amount_sats')} sats")
     
@@ -65,17 +65,17 @@ def handle_funded_test(test_data: dict, state: StateManager, current_height: int
     is_locked = current_height < locktime
     if is_locked:
         blocks_remaining = locktime - current_height
- print(f" Locked: {blocks_remaining} blocks remaining until height {locktime}")
+        print(f" Locked: {blocks_remaining} blocks remaining until height {locktime}")
         
         # Can still sweep cooperative paths
         if path in ('normal', 'cooperative', 'publisher'):
- print(f" But path '{path}' doesn't require locktime - can sweep now!")
+            print(f" But path '{path}' doesn't require locktime - can sweep now!")
         else:
- print(f" Path '{path}' requires locktime - skipping sweep")
+            print(f" Path '{path}' requires locktime - skipping sweep")
             return
     
     # Attempt sweep
- print(f"\n Attempting sweep via path: {path}")
+    print(f"\n Attempting sweep via path: {path}")
     
     destination = get_sweep_destination(test_data)
     
@@ -89,7 +89,7 @@ def handle_funded_test(test_data: dict, state: StateManager, current_height: int
         )
         
         if sweep_txid:
- print(f" Sweep successful!")
+            print(f" Sweep successful!")
             print(f"   TX: {sweep_txid}")
             print(f"   Explorer: {get_explorer_url(sweep_txid)}")
             
@@ -98,10 +98,10 @@ def handle_funded_test(test_data: dict, state: StateManager, current_height: int
             test_data['sweep_txid'] = sweep_txid
             state.save()
         else:
- print(f" Sweep returned None")
+            print(f" Sweep returned None")
             
     except Exception as e:
- print(f" Sweep failed: {e}")
+        print(f" Sweep failed: {e}")
         import traceback
         traceback.print_exc()
 
@@ -145,7 +145,7 @@ def test_hodl_p2wsh(generate_keypair, locktime_value, current_height):
     state.add_test('cltv_hodl', 'p2wsh', test_data)
     state.save()
     
- print(f"\n Created: Simple HODL P2WSH")
+    print(f"\n Created: Simple HODL P2WSH")
     print(f"   Address: {test_data['address']}")
     print(f"   Locktime: {locktime_value}")
     print(f"   Amount: {get_test_amount(test_number)} sats")
@@ -184,7 +184,7 @@ def test_hodl_taproot(generate_keypair, locktime_value, current_height):
     state.add_test('cltv_hodl', 'taproot', test_data)
     state.save()
     
- print(f"\n Created: Simple HODL Taproot")
+    print(f"\n Created: Simple HODL Taproot")
     print(f"   Address: {test_data['address']}")
 
 
@@ -227,7 +227,7 @@ def test_escrow_p2wsh_normal(alice_bob_keypairs, locktime_value, current_height)
     state.add_test('cltv_escrow', 'p2wsh', test_data)
     state.save()
     
- print(f"\n Created: Escrow P2WSH (Normal)")
+    print(f"\n Created: Escrow P2WSH (Normal)")
     print(f"   Address: {test_data['address']}")
 
 
@@ -266,7 +266,7 @@ def test_escrow_p2wsh_arbitration_alice(alice_bob_keypairs, locktime_value, curr
     state.add_test('cltv_escrow', 'p2wsh', test_data)
     state.save()
     
- print(f"\n Created: Escrow P2WSH (Arbitration Alice)")
+    print(f"\n Created: Escrow P2WSH (Arbitration Alice)")
     print(f"   Address: {test_data['address']}")
 
 
@@ -305,7 +305,7 @@ def test_escrow_taproot_normal(alice_bob_keypairs, locktime_value, current_heigh
     state.add_test('cltv_escrow', 'taproot', test_data)
     state.save()
     
- print(f"\n Created: Escrow Taproot (Normal)")
+    print(f"\n Created: Escrow Taproot (Normal)")
     print(f"   Address: {test_data['address']}")
 
 
@@ -347,7 +347,7 @@ def test_twofactor_p2wsh_normal(twofactor_keypairs, locktime_value, current_heig
     state.add_test('cltv_twofactor', 'p2wsh', test_data)
     state.save()
     
- print(f"\n Created: Two-Factor P2WSH (Normal)")
+    print(f"\n Created: Two-Factor P2WSH (Normal)")
     print(f"   Address: {test_data['address']}")
 
 
@@ -385,7 +385,7 @@ def test_twofactor_p2wsh_recovery(twofactor_keypairs, locktime_value, current_he
     state.add_test('cltv_twofactor', 'p2wsh', test_data)
     state.save()
     
- print(f"\n Created: Two-Factor P2WSH (Recovery)")
+    print(f"\n Created: Two-Factor P2WSH (Recovery)")
     print(f"   Address: {test_data['address']}")
 
 
@@ -427,7 +427,7 @@ def test_payment_channel_p2wsh_cooperative(payment_channel_keypairs, locktime_va
     state.add_test('cltv_payment_channel', 'p2wsh', test_data)
     state.save()
     
- print(f"\n Created: Payment Channel P2WSH (Cooperative)")
+    print(f"\n Created: Payment Channel P2WSH (Cooperative)")
     print(f"   Address: {test_data['address']}")
 
 
@@ -465,7 +465,7 @@ def test_payment_channel_p2wsh_refund(payment_channel_keypairs, locktime_value, 
     state.add_test('cltv_payment_channel', 'p2wsh', test_data)
     state.save()
     
- print(f"\n Created: Payment Channel P2WSH (Refund)")
+    print(f"\n Created: Payment Channel P2WSH (Refund)")
     print(f"   Address: {test_data['address']}")
 
 
@@ -510,7 +510,7 @@ def test_data_publishing_p2wsh_publisher(data_publishing_keypairs, test_data_pre
     state.add_test('cltv_data_publishing', 'p2wsh', test_data)
     state.save()
     
- print(f"\n Created: Data Publishing P2WSH (Publisher)")
+    print(f"\n Created: Data Publishing P2WSH (Publisher)")
     print(f"   Address: {test_data['address']}")
     print(f"   Data hash: {test_data_preimage['data_hash'][:20]}...")
 
@@ -551,7 +551,7 @@ def test_data_publishing_p2wsh_buyer_refund(data_publishing_keypairs, test_data_
     state.add_test('cltv_data_publishing', 'p2wsh', test_data)
     state.save()
     
- print(f"\n Created: Data Publishing P2WSH (Buyer Refund)")
+    print(f"\n Created: Data Publishing P2WSH (Buyer Refund)")
     print(f"   Address: {test_data['address']}")
 
 
@@ -576,7 +576,7 @@ def test_all_contracts_quick(
     This is useful for rapid testing and funding multiple addresses at once.
     """
     print(f"\n{'='*80}")
- print(f" QUICK E2E TEST: All Contracts (Locktime: {locktime_value})")
+    print(f" QUICK E2E TEST: All Contracts (Locktime: {locktime_value})")
     print(f"{'='*80}")
     
     state = StateManager(locktime=locktime_value)
@@ -705,12 +705,12 @@ def test_all_contracts_quick(
     state.save()
     
     # Print summary
- print(f"\n CONTRACTS CREATED: {len(contracts_created)}")
+    print(f"\n CONTRACTS CREATED: {len(contracts_created)}")
     print("-" * 60)
     for name, addr in contracts_created:
         print(f"   {name}")
         print(f"   └─ {addr}")
     
- print(f"\n To fund all addresses, send sats to each address above.")
+    print(f"\n To fund all addresses, send sats to each address above.")
     print(f"   Run again after funding to attempt sweeps.")
 

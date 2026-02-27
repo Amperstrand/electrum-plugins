@@ -77,7 +77,7 @@ def get_explorer_url(txid=None, address=None):
 
 def print_network_info():
     """Print current network configuration."""
- print(f" Network: {NETWORK_NAME}")
+    print(f" Network: {NETWORK_NAME}")
     print(f"   Flag: {NETWORK_FLAG}")
     print(f"   Wallet dir: ~/.electrum/{WALLET_SUBDIR}/")
     print(f"   Explorer: {EXPLORER_BASE}")

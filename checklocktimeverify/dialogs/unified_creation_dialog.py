@@ -354,7 +354,7 @@ class UnifiedCreationDialog(WindowModalDialog):
             row_layout.addWidget(test_btn, stretch=0)
         
         # Icon from key role
- icon = role.icon if role else ""
+        icon = role.icon if role else ""
         label_text = f"{icon} {label}"
         
         self.form_layout.addRow(label_text + ":", row)
@@ -401,14 +401,14 @@ class UnifiedCreationDialog(WindowModalDialog):
         
         # Warning
         warning = QLabel(
- "<small><font color='#c62828'> When publisher claims, "
+            "<small><font color='#c62828'> When publisher claims, "
             "the data becomes PUBLIC on the blockchain!</font></small>"
         )
         warning.setWordWrap(True)
         data_layout.addWidget(warning)
         
         data_widget.setLayout(data_layout)
- self.form_layout.addRow(_(" Data to Publish:"), data_widget)
+        self.form_layout.addRow(_(" Data to Publish:"), data_widget)
     
     def _update_data_hash(self):
         """Update data hash display when data changes."""
@@ -608,7 +608,7 @@ class UnifiedCreationDialog(WindowModalDialog):
             **storage_data
         )
         
- logger.info(f"[CLTV] Address saved successfully")
+        logger.info(f"[CLTV] Address saved successfully")
         
         # UI will refresh automatically via Electrum's hooks when address is detected
 

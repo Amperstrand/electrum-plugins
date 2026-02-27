@@ -164,10 +164,10 @@ def ensure_daemon():
             return True
     except Exception:
         pass
- print(' Starting daemon...')
+    print(' Starting daemon...')
     proc = subprocess.run([ELECTRUM_CLI, '--signet', 'daemon', '-d'], capture_output=True, text=True)
     if proc.returncode != 0:
- print(f" Daemon start failed: {proc.stderr.strip()}")
+        print(f" Daemon start failed: {proc.stderr.strip()}")
         return False
     time.sleep(2)
     return True
@@ -176,28 +176,28 @@ def ensure_daemon():
 def fund_rpc(addresses, wallet_path=None):
     wallet_path = os.path.expanduser(wallet_path or DEFAULT_WALLET)
     if not os.path.exists(wallet_path):
- print(f" Wallet not found: {wallet_path}")
+        print(f" Wallet not found: {wallet_path}")
         return None
     if not ensure_daemon():
         return None
     outputs_json = json.dumps([[a['address'], btc_amt(AMOUNT_SATS)] for a in addresses])
- print(f"\n paytomany outputs JSON: {outputs_json}")
+    print(f"\n paytomany outputs JSON: {outputs_json}")
     pay = subprocess.run([ELECTRUM_CLI, '--signet', '-w', wallet_path, 'paytomany', outputs_json, '--addtransaction'], capture_output=True, text=True)
     if pay.returncode != 0:
- print(f" paytomany failed: {pay.stderr.strip()}")
+        print(f" paytomany failed: {pay.stderr.strip()}")
         return None
     raw_tx = pay.stdout.strip().splitlines()[-1]
     if len(raw_tx) < 40:
- print(f" Unexpected paytomany output: {pay.stdout}")
+        print(f" Unexpected paytomany output: {pay.stdout}")
         return None
     bcast = subprocess.run([ELECTRUM_CLI, '--signet', 'broadcast', raw_tx], capture_output=True, text=True)
     if bcast.returncode != 0:
- print(f" Broadcast failed: {bcast.stderr.strip()}")
+        print(f" Broadcast failed: {bcast.stderr.strip()}")
         return None
     # Parse txid (last 64 hex chars in output)
     txid_candidates = [tok for tok in bcast.stdout.split() if len(tok) == 64 and all(c in '0123456789abcdef' for c in tok.lower())]
     txid = txid_candidates[-1] if txid_candidates else bcast.stdout.strip()[-64:]
- print(f" Broadcast TXID: {txid}")
+    print(f" Broadcast TXID: {txid}")
     return txid
 
 def poll_confirmations(state, max_wait=60, interval=5):
@@ -208,10 +208,10 @@ def poll_confirmations(state, max_wait=60, interval=5):
     """
     txid = state.get('funding_txid')
     if not txid:
- print(' No funding_txid recorded.')
+        print(' No funding_txid recorded.')
         return None
     if not ensure_daemon():
- print(' Daemon unavailable; cannot poll.')
+        print(' Daemon unavailable; cannot poll.')
         return None
     elapsed = 0
     confirmations = None
@@ -222,11 +222,11 @@ def poll_confirmations(state, max_wait=60, interval=5):
             if confirmations is not None:
                 state['confirmations'] = confirmations
                 STATE_FILE.write_text(json.dumps(state, indent=2))
- print(f" {txid} confirmations={confirmations}")
+                print(f" {txid} confirmations={confirmations}")
                 if confirmations >= 1:
                     break
         else:
- print(f" get_tx_status failed: {res.stderr.strip()}")
+            print(f" get_tx_status failed: {res.stderr.strip()}")
         time.sleep(interval)
         elapsed += interval
     return confirmations
@@ -235,7 +235,7 @@ def poll_confirmations(state, max_wait=60, interval=5):
 def show_status():
     state = load_state()
     if not state:
- print(" No state file. Run --create first.")
+        print(" No state file. Run --create first.")
         return
     print("="*70)
     print("MODERN BATCH FUNDING STATUS")
@@ -277,7 +277,7 @@ def main():
             addresses = build_all_addresses()
             state = save_state(addresses)
         if state['status'] == 'FUNDED':
- print(" Already funded.")
+            print(" Already funded.")
         else:
             txid = fund_rpc(state['addresses'], args.wallet)
             if txid:
@@ -292,9 +292,9 @@ def main():
     if args.confirm:
         state = load_state()
         if not state:
- print(' No state file to confirm.')
+            print(' No state file to confirm.')
         elif state.get('status') != 'FUNDED':
- print(' Not funded yet.')
+            print(' Not funded yet.')
         else:
             poll_confirmations(state)
     if not (args.create or args.fund or args.status):

@@ -507,7 +507,7 @@ class FeeCalculator:
         output_amount = balance - total_fees
         
         if output_amount <= 0:
-        logger.warning("[FeeCalculator] Insufficient funds: need %s sats, have %s sats", total_fees, balance)
+            logger.warning("[FeeCalculator] Insufficient funds: need %s sats, have %s sats", total_fees, balance)
             return {
                 'success': False,
                 'error': f'Insufficient funds: need {total_fees} sats for fees, have {balance} sats',

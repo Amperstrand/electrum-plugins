@@ -89,7 +89,6 @@ TEST_KEYS = {
         'description': 'Decaying multisig member 5'
     }
 }
-}
 
 
 def get_test_privkey(key_name: str) -> ECPrivkey:
@@ -257,13 +256,13 @@ if __name__ == '__main__':
     # Verify pubkeys match expected values
     print("\nVerifying pubkey derivation...")
     alice = get_test_keypair('alice')
- print(f" Alice pubkey: {alice['pubkey'][:32]}...")
- print(f" All test keys loaded successfully")
+    print(f" Alice pubkey: {alice['pubkey'][:32]}...")
+    print(f" All test keys loaded successfully")
     
     # Test contract key lookup
     print("\nTesting contract key lookup...")
     try:
         escrow_keys = get_test_keys_for_contract('escrow')
- print(f" Escrow keys: {list(escrow_keys.keys())}")
+        print(f" Escrow keys: {list(escrow_keys.keys())}")
     except Exception as e:
         print(f"  (Contract lookup not available: {e})")
