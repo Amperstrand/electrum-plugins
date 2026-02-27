@@ -18,7 +18,6 @@ from electrum import bitcoin
 from electrum.util import BitcoinException
 from PyQt6.QtWidgets import QLabel, QCheckBox, QSpinBox, QPushButton, QGridLayout
 from electrum.gui.qt.util import WindowModalDialog
-from electrum.gui.qt.history_list import TX_ICONS
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +43,6 @@ class Plugin(BasePlugin):
         BasePlugin.__init__(self, parent, config, name)
         self.windows = []
         self.wallet_windows = {}  # Map wallet -> window
-        self._monitors = {}  # Map wallet -> CLTVAddressMonitor
         
         # No plugin-level UTXO cache - we rely on Electrum's wallet.adb which already caches and updates automatically
         
@@ -94,7 +92,7 @@ class Plugin(BasePlugin):
         """Signal that this plugin has user-configurable settings."""
         return True
 
-    def settings_dialog(self, window, wallet):
+    def settings_dialog(self, window):
         """Show plugin settings dialog."""
         d = WindowModalDialog(window, _("CLTV Plugin Settings"))
         
@@ -240,53 +238,6 @@ class Plugin(BasePlugin):
             logger.warning(f"[CLTV] [HELPER] get_default_locktime failed: {e}")
             return max(1, int(offset_blocks))
 
-    def build_status_cell(self, wallet, txid: str, is_lightning: bool = False) -> tuple:
-        """Return (status, status_str, icon_name, tooltip) consistent with Electrum history.
-
-        Uses wallet.get_tx_status and TX_ICONS from Electrum's history_list module.
-        """
-        # Get mined info directly from Electrum's ADB
-        adb = wallet.adb
-        tx_mined_info_raw = adb.get_tx_height(txid)
-        # Build a synthetic TxMinedInfo for wallet.get_tx_status
-        from electrum.util import TxMinedInfo
-        tx_mined_info = TxMinedInfo(
-            _height=tx_mined_info_raw._height if hasattr(tx_mined_info_raw, '_height') else tx_mined_info_raw.height(),
-            conf=tx_mined_info_raw.conf if tx_mined_info_raw.conf is not None else 0,
-            timestamp=getattr(tx_mined_info_raw, 'timestamp', None),
-        )
-        status, status_str = wallet.get_tx_status(txid, tx_mined_info)
-        icon_name = "lightning" if is_lightning else (TX_ICONS[status] if 0 <= status < len(TX_ICONS) else None)
-
-        # Tooltip similar to Electrum
-        if status < 4:  # unconfirmed variants
-            if status == 0:
-                tip = "Unconfirmed (in mempool)"
-            elif status == 1:
-                tip = "Unconfirmed parent (parent not confirmed)"
-            elif status == 2:
-                tip = "Local or future (not SPV verified)"
-            elif status == 3:
-                tip = "Local broadcast (not yet confirmed)"
-            else:
-                tip = "Unconfirmed"
-        else:
-            if mined['conf'] >= 6:
-                tip = f"Confirmed ≥6 (depth: {mined['conf']})"
-            else:
-                tip = f"Confirmed ({mined['conf']} conf)"
-            if not mined['spv_verified']:
-                tip += " - SPV header timestamp pending"
-            else:
-                # Append human-readable time if timestamp is known
-                try:
-                    from electrum.util import format_time
-                    if mined['timestamp']:
-                        tip += f"\nTime: {format_time(mined['timestamp'])}"
-                except Exception:
-                    pass
-        return status, status_str, icon_name, tip
-        
     @hook
     def load_wallet(self, wallet, window):
         """Called when a wallet is loaded - add CLTV tab + start monitoring"""
@@ -307,14 +258,7 @@ class Plugin(BasePlugin):
         """Called when wallet is closed - cleanup monitor"""
         logger.info(f"[CLTV] close_wallet called")
         
-        # Cleanup monitor (prevent memory leaks)
-        if wallet in self._monitors:
-            try:
-                self._monitors[wallet].unregister_callbacks()
-                del self._monitors[wallet]
-                logger.info(f"[CLTV] [MONITOR] Cleaned up monitor for wallet")
-            except Exception as e:
-                logger.error(f"[CLTV] [MONITOR] Error cleaning up: {e}")
+
     
     @hook
     def on_history(self, wallet, *args):
@@ -595,11 +539,6 @@ class Plugin(BasePlugin):
             import traceback
             logger.info(f"[CLTV] [TAB] Traceback:\n{traceback.format_exc()}")
     
-    def refresh_cltv_tab(self, wallet):
-        """Refresh the CLTV tab data."""
-        if hasattr(self, 'cltv_list') and self.cltv_list:
-            self.cltv_list.update_rows.emit(wallet)
-    
     # ==================== End Tab-Based UI ====================
     
     # ==================== Dialog Launchers (Used by Tab) ====================
@@ -707,8 +646,7 @@ class Plugin(BasePlugin):
             RuntimeError: If wallet has no database or storage fails
             ValueError: If required parameters are missing or invalid
         """
-        script_type = data.get('script_type', 'unknown')
- logger.info(f"[CLTV] [STORAGE] Saving {script_type} address {address[:20]}...")
+ logger.info(f"[CLTV] [STORAGE] Saving {data.get('script_type', 'unknown')} address {address[:20]}...")
  logger.debug(f"[CLTV] [STORAGE] DEBUG: Incoming data keys: {list(data.keys())}")
         
         # Get plugin storage from wallet.db
@@ -788,50 +726,46 @@ class Plugin(BasePlugin):
         # Add key_source tracking (optional metadata, not used for regeneration)
         if 'key_source' in data:
             params['key_source'] = data['key_source']
-            
-            # Build minimal address entry - only store script_type + params
-            # Everything else is derived on-demand via regenerate_address_data()
-            address_data = {
-                'script_type': script_type,
-                'params': params,
-                'created_at': int(time.time())
-            }
-            
-            # Save to nested structure (allow overwrites for storage format updates)
-            is_update = address in cltv_data['addresses']
-            cltv_data['addresses'][address] = address_data
-            plugin_storage['checklocktimeverify'] = cltv_data
-            try:
-                wallet.db.write()
-            except Exception as e:
-                raise RuntimeError(f"Failed to write to wallet database: {e}") from e
-            
-            # Update cache with new address instead of invalidating (much faster!)
-            # Build complete address entry for cache
-            cache_entry = {
-                'address': address,
-                'script_type': script_type,
-                'params': params,
-                'created_at': address_data.get('created_at', int(time.time())),
-            }
-            # Regenerate full data for cache
-            try:
-                from .cltv_lib.address_regenerator import regenerate_address_data
-                regenerated = regenerate_address_data(script_type, params)
-                cache_entry.update(regenerated)
-            except Exception as e:
+
+        # Build minimal address entry - only store script_type + params
+        # Everything else is derived on-demand via regenerate_address_data()
+        address_data = {
+            'script_type': script_type,
+            'params': params,
+            'created_at': int(time.time())
+        }
+
+        # Save to nested structure (allow overwrites for storage format updates)
+        is_update = address in cltv_data['addresses']
+        cltv_data['addresses'][address] = address_data
+        plugin_storage['checklocktimeverify'] = cltv_data
+        try:
+            wallet.db.write()
+        except Exception as e:
+            raise RuntimeError(f"Failed to write to wallet database: {e}") from e
+
+        # Update cache with new address instead of invalidating (much faster!)
+        # Build complete address entry for cache
+        cache_entry = {
+            'address': address,
+            'script_type': script_type,
+            'params': params,
+            'created_at': address_data.get('created_at', int(time.time())),
+        }
+        # Regenerate full data for cache
+        try:
+            from .cltv_lib.address_regenerator import regenerate_address_data
+            regenerated = regenerate_address_data(script_type, params)
+            cache_entry.update(regenerated)
+        except Exception as e:
  logger.warning(f"[CLTV] [STORAGE] Failed to regenerate for cache: {e}")
-            
-            self.update_address_cache(wallet, address, cache_entry)
-            
-            # Register with monitor for automatic tracking
-            if wallet in self._monitors:
-                self._monitors[wallet].add_cltv_address(address, address_data)
-            
-            # Register with Electrum wallet for UTXO tracking (includes sync)
-            self._register_addresses_with_wallet(wallet, address=address)
-            
-            action = "Updated" if is_update else "Saved"
+
+        self.update_address_cache(wallet, address, cache_entry)
+
+        # Register with Electrum wallet for UTXO tracking (includes sync)
+        self._register_addresses_with_wallet(wallet, address=address)
+
+        action = "Updated" if is_update else "Saved"
  logger.info(f"[CLTV] [STORAGE] {action} {script_type} ({len(cltv_data['addresses'])} total)")
     
     def load_all_addresses(self, wallet, use_cache: bool = True) -> List[Dict]:
@@ -1042,10 +976,6 @@ class Plugin(BasePlugin):
             logger.info(f"[CLTV] [CLEANUP] ERROR deleting address: {e}")
             return False
     
-    def remove_address(self, wallet, address: str) -> bool:
-        """Remove a CLTV address from wallet storage (alias for delete_address)."""
-        return self.delete_address(address, wallet)
-    
     def set_address_label(self, wallet, address: str, label: str) -> bool:
         """Set a label for a CLTV address.
         
@@ -1117,285 +1047,4 @@ class Plugin(BasePlugin):
             logger.info(f"[CLTV] [CLEANUP] ERROR: {e}")
             return {'deleted': 0, 'addresses': [], 'error': str(e)}
 
-    # Note: We use Electrum's native synchronizer for address monitoring.
-    # Addresses are registered via adb.add_address() and balances are fetched
-    # from wallet.get_addr_balance() which reads from Electrum's cache.
-    # UTXOs are fetched directly via wallet.adb.get_addr_utxo().
-    
-    def sign_cltv_transaction(self, tx, pubkey_hex: str, privkey_hex: str = None):
-        """
-        Manually sign a CLTV transaction with custom witness script.
-        
-        Since Electrum can't auto-extract pubkeys from our custom CLTV script,
-        we sign manually using the same ECDSA approach Electrum uses.
-        
-        Args:
-            tx: PartialTransaction to sign
-            pubkey_hex: Public key for signing
-            privkey_hex: Private key (uses hardcoded test key if None)
-            
-        Returns:
-            Signed transaction
-        """
-        from electrum.bitcoin import construct_witness
-        from electrum.crypto import sha256d
-        import electrum_ecc as ecc
-        from electrum_ecc import ecdsa_der_sig_from_ecdsa_sig64
-        
-        # Get private key
-        if pubkey_hex.upper() == '0279BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798':
-            if privkey_hex is None:
-                privkey_hex = '0000000000000000000000000000000000000000000000000000000000000001'
-                logger.info(f"[CLTV] [SIGN] Using hardcoded test key for generator point")
-        
-        if privkey_hex is None:
-            raise BitcoinException("Private key not available for signing")
-        
- logger.info(f"[CLTV] [SIGN] Signing {len(tx.inputs())} input(s)...")
-        
-        privkey = ecc.ECPrivkey(bytes.fromhex(privkey_hex))
-        
-        # Sign each input
-        for i, txin in enumerate(tx.inputs()):
-            logger.info(f"[CLTV] [SIGN]   Input {i}: Computing sighash...")
-            
-            preimage = tx.serialize_preimage(txin_index=i)
-            sighash = sha256d(preimage)
-            
-            logger.info(f"[CLTV] [SIGN]     Signing with ECDSA...")
-            sig_compact = privkey.ecdsa_sign(sighash)
-            sig_der = ecdsa_der_sig_from_ecdsa_sig64(sig_compact)
-            sig = sig_der + b'\x01'  # SIGHASH_ALL
-            
-            logger.info(f"[CLTV] [SIGN]     Building witness...")
-            witness_items = [sig, txin.witness_script]
-            txin.witness = construct_witness(witness_items)
-            txin.script_sig = b''
-            
-            logger.info(f"[CLTV] [SIGN]   [OK] Input {i} signed")
-        
-        logger.info(f"[CLTV] [SIGN] [OK] Transaction fully signed: {tx.txid()}")
-        
-        return tx
-    
-    def get_cltv_keypairs(self, pubkey_hex: str, privkey_hex: str = None) -> dict:
-        """
-        Create external_keypairs dictionary for CLTV signing.
-        
-        Note: This is kept for compatibility but won't work with custom CLTV scripts
-        because Electrum can't extract pubkeys from them. We use sign_cltv_transaction()
-        instead for manual signing.
-        
-        Args:
-            pubkey_hex: Public key from CLTV address parameters
-            privkey_hex: Private key (for POC, uses hardcoded test key)
-            
-        Returns:
-            Dictionary mapping pubkey_bytes -> privkey_bytes
-        """
-        # For POC: Use hardcoded test key if it's the secp256k1 generator point
-        if pubkey_hex.upper() == '0279BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798':
-            if privkey_hex is None:
-                privkey_hex = '0000000000000000000000000000000000000000000000000000000000000001'
-                logger.info(f"[CLTV] [KEYPAIRS] Using hardcoded test key for generator point")
-        
-        if privkey_hex is None:
-            raise BitcoinException("Private key not available for signing")
-        
-        pubkey_bytes = bytes.fromhex(pubkey_hex)
-        privkey_bytes = bytes.fromhex(privkey_hex)
-        
-        logger.info(f"[CLTV] [KEYPAIRS] Created external_keypairs for pubkey: {pubkey_hex[:32]}...")
-        
-        return {pubkey_bytes: privkey_bytes}
-    
-    def create_sweep_tx_maker(
-        self,
-        address: str,
-        utxos: list,
-        dest_address: str,
-        locktime: int,
-        script_hex: str,
-        pubkey_hex: str,
-        wallet
-    ):
-        """
-        Create a make_tx function for Electrum's ConfirmTxDialog.
-        
-        The returned function builds unsigned CLTV sweep transactions with
-        proper fee calculation based on the fee policy.
-        
-        Args:
-            address: CLTV address being swept from
-            utxos: List of UTXOs to sweep
-            dest_address: Destination address
-            locktime: Required locktime for CLTV
-            script_hex: Witness script hex
-            pubkey_hex: Public key for signing
-            wallet: Wallet instance
-            
-        Returns:
-            Callable that accepts (fee_policy, confirmed_only, base_tx)
-            and returns a PartialTransaction
-        """
-        
-        def make_tx(fee_policy, *, confirmed_only=False, base_tx=None):
-            """Build unsigned CLTV sweep transaction"""
-            from electrum.transaction import (
-                PartialTransaction, PartialTxInput, 
-                PartialTxOutput, TxOutpoint
-            )
-            from electrum.util import NotEnoughFunds
-            
-            logger.info(f"[CLTV] [MAKE_TX] Building transaction with fee_policy: {fee_policy}")
-            
-            # Build inputs from CLTV UTXOs
-            tx_inputs = []
-            total_input = 0
-            
-            pubkey_bytes = bytes.fromhex(pubkey_hex)
-            script_bytes = bytes.fromhex(script_hex)
-            
-            for utxo in utxos:
-                prevout = TxOutpoint(
-                    txid=bytes.fromhex(utxo['tx_hash']), 
-                    out_idx=utxo['tx_pos']
-                )
-                txin = PartialTxInput(prevout=prevout)
-                txin._trusted_value_sats = utxo['value']
-                txin.nsequence = 0xFFFFFFFE  # Enable locktime, disable RBF
-                txin.script_type = 'p2wsh'
-                txin.witness_script = script_bytes
-                
-                # Note: We can't set txin.pubkeys directly (it's computed from script_descriptor)
-                # For custom CLTV scripts, we'll sign manually using sign_cltv_transaction()
-                
-                tx_inputs.append(txin)
-                total_input += utxo['value']
-            
-            logger.info(f"[CLTV] [MAKE_TX]   Inputs: {len(tx_inputs)} UTXOs = {total_input:,} sats")
-            
-            # Estimate transaction size for fee calculation
-            # P2WSH witness: ~108 bytes per input, ~31 bytes per output
-            estimated_size = (
-                10 +  # Version, locktime, etc.
-                len(tx_inputs) * 41 +  # Input outpoints + nSequence
-                32 +  # Single output
-                len(tx_inputs) * 108  # Witness data per input
-            )
-            
-            logger.info(f"[CLTV] [MAKE_TX]   Estimated size: {estimated_size} vbytes")
-            
-            # Calculate fee using Electrum's policy
-            fee = fee_policy.estimate_fee(
-                size=estimated_size,
-                network=wallet.network,
-                allow_fallback_to_static_rates=True
-            )
-            
-            logger.info(f"[CLTV] [MAKE_TX]   Fee: {fee:,} sats ({fee/estimated_size:.1f} sat/vbyte)")
-            
-            # Calculate output amount (sweep all minus fee)
-            output_amount = total_input - fee
-            
-            logger.info(f"[CLTV] [MAKE_TX]   Output: {output_amount:,} sats to {dest_address[:20]}...")
-            
-            # Build single output (no change for sweeps)
-            txout = PartialTxOutput.from_address_and_value(
-                dest_address, 
-                output_amount
-            )
-            
-            # Create transaction
-            tx = PartialTransaction.from_io(
-                tx_inputs, 
-                [txout], 
-                locktime=locktime
-            )
-            tx.version = 2
-            
-            logger.info(f"[CLTV] [MAKE_TX] [OK] Built unsigned transaction: {total_input:,} - {fee:,} = {output_amount:,} sats")
-            
-            return tx
-        
-        return make_tx
-    
-    def fund_test_addresses(self, wallet, amount: int = 2000, fee: int = 1000) -> Dict:
-        """
-        Fund all unfunded CLTV test addresses with a single transaction.
-        
-        Usage from Electrum console:
-            >>> cltv = plugins.get('checklocktimeverify')
-            >>> cltv.fund_test_addresses(wallet, amount=2000)
-        
-        Args:
-            wallet: Electrum wallet instance
-            amount: Amount to send to each address (default: 2000 sats)
-            fee: Total transaction fee (default: 1000 sats)
-        
-        Returns:
-            dict with 'success', 'funded_count', 'tx', 'txid'
-        """
-        try:
-            from electrum.transaction import PartialTransaction, PartialTxOutput
-            
-            logger.info(f"[CLTV] [FUND] Loading CLTV addresses from wallet...")
-            addresses = self.load_all_addresses(wallet)
-            
-            if not addresses:
-                return {'success': False, 'error': 'No CLTV addresses found'}
-            
-            # Find unfunded addresses (balance = 0)
-            unfunded = []
-            for addr_data in addresses:
-                addr = addr_data['address']
-                c, u, x = wallet.get_addr_balance(addr)
-                balance = c + u + x
-                if balance == 0:
-                    unfunded.append(addr)
-            
-            if not unfunded:
-                logger.info(f"[CLTV] [FUND] All {len(addresses)} addresses are already funded")
-                return {'success': True, 'funded_count': 0, 'message': 'All addresses already funded'}
-            
-            logger.info(f"[CLTV] [FUND] Found {len(unfunded)} unfunded addresses (out of {len(addresses)} total)")
-            
-            # Build outputs
-            outputs = [(addr, amount) for addr in unfunded]
-            
-            # Create transaction
-            logger.info(f"[CLTV] [FUND] Building transaction: {len(unfunded)} outputs × {amount} sats + {fee} sat fee")
-            tx = wallet.mktx(outputs=outputs, password=None, fee=fee)
-            
-            # Sign transaction
-            logger.info(f"[CLTV] [FUND] Signing transaction...")
-            wallet.sign_transaction(tx, password=None)
-            
-            # Broadcast
-            logger.info(f"[CLTV] [FUND] Broadcasting transaction...")
-            network = wallet.network
-            if network:
-                result = network.run_from_another_thread(network.broadcast_transaction(tx))
-                txid = tx.txid()
-                
- logger.info(f"[CLTV] [FUND] Successfully funded {len(unfunded)} addresses")
-                logger.info(f"[CLTV] [FUND]    TXID: {txid}")
-                for i, addr in enumerate(unfunded):
-                    logger.info(f"[CLTV] [FUND]    [{i+1}] {addr[:30]}... = {amount} sats")
-                
-                return {
-                    'success': True,
-                    'funded_count': len(unfunded),
-                    'tx': tx,
-                    'txid': txid,
-                    'addresses': unfunded
-                }
-            else:
-                return {'success': False, 'error': 'No network connection'}
-                
-        except Exception as e:
-            logger.info(f"[CLTV] [FUND] Error: {e}")
-            import traceback
-            logger.info(f"[CLTV] {traceback.format_exc()}")
-            return {'success': False, 'error': str(e)}
     
