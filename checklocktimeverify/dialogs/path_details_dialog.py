@@ -16,7 +16,6 @@ All data is derived from ContractDefinition - no hardcoding.
 """
 
 from typing import Dict, Any, Optional
-import hashlib
 
 from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QFrame,

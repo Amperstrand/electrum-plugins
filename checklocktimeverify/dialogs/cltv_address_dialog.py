@@ -191,9 +191,6 @@ class CLTVCoinList(MyTreeView):
         menu.exec(self.viewport().mapToGlobal(position))
 
 
-# Alias for backward compatibility
-CLTVUTXOList = CLTVCoinList
-
 
 class CLTVAddressHistoryModel(HistoryModel):
     """History model filtered to a specific address."""
@@ -1321,7 +1318,7 @@ class CLTVAddressDialog(WindowModalDialog, QtEventListener):
         if hasattr(self, 'wallet') and self.wallet:
             if constants.net.TESTNET:
                 network = 'testnet'
-            elif constants.net.SIGNET:
+            elif constants.net.NET_NAME == 'signet':
                 network = 'signet'
             elif constants.net.NET_NAME == 'mainnet':
                 network = 'mainnet'

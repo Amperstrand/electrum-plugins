@@ -16,7 +16,7 @@ Usage:
 from typing import Dict, Any, Optional, Callable, List
 
 from PyQt6.QtWidgets import (
-    QVBoxLayout, QHBoxLayout, QGroupBox, QWidget
+    QVBoxLayout, QHBoxLayout, QGroupBox, QWidget, QLabel
 )
 from PyQt6.QtGui import QFont
 from PyQt6.QtCore import Qt
@@ -466,9 +466,8 @@ def compute_hash160(data: bytes) -> bytes:
     Returns:
         20-byte HASH160 result
     """
-    import hashlib
-    sha256_hash = hashlib.sha256(data).digest()
-    return hashlib.new('ripemd160', sha256_hash).digest()
+    from electrum.crypto import hash_160
+    return hash_160(data)
 
 
 def get_data_hash_from_preimage(preimage: str) -> str:
