@@ -325,19 +325,19 @@ class CLTVAddressDialog(WindowModalDialog, QtEventListener):
         if locktime < 500000000:
             # Block height locktime
             if is_locked:
-                status_text = f"🔒 {_('Unlocks at block')} <b>{locktime}</b> ({blocks_remaining} {_('blocks remaining')})"
+                status_text = f"{_('Unlocks at block')} <b>{locktime}</b> ({blocks_remaining} {_('blocks remaining')})"
                 status_color = ColorScheme.RED.as_color()
             else:
-                status_text = f"🔓 {_('Unlocked at block')} <b>{locktime}</b> — {_('Can be spent')}"
+                status_text = f"{_('Unlocked at block')} <b>{locktime}</b> — {_('Can be spent')}"
                 status_color = ColorScheme.GREEN.as_color()
         else:
             # Unix timestamp locktime
             unlock_time = datetime.fromtimestamp(locktime).strftime('%Y-%m-%d %H:%M:%S')
             if is_locked:
-                status_text = f"🔒 {_('Unlocks at')} <b>{unlock_time}</b> UTC"
+                status_text = f"{_('Unlocks at')} <b>{unlock_time}</b> UTC"
                 status_color = ColorScheme.RED.as_color()
             else:
-                status_text = f"🔓 {_('Unlocked at')} <b>{unlock_time}</b> UTC — {_('Can be spent')}"
+                status_text = f"{_('Unlocked at')} <b>{unlock_time}</b> UTC — {_('Can be spent')}"
                 status_color = ColorScheme.GREEN.as_color()
 
         return {'text': status_text, 'color': status_color}
@@ -418,7 +418,7 @@ class CLTVAddressDialog(WindowModalDialog, QtEventListener):
         """
         if always_available:
             # Path always available
-            text = f"✅ {_(path_name)}: {_(description)}"
+            text = f"{_(path_name)}: {_(description)}"
             color = ColorScheme.GREEN.as_color().name()
         else:
             # Path availability depends on locktime
@@ -426,10 +426,10 @@ class CLTVAddressDialog(WindowModalDialog, QtEventListener):
             blocks_remaining = max(0, locktime - current_height)
             
             if is_locked:
-                text = f"🔒 {_(path_name)}: {_(description)} {_('after block')} {locktime} ({blocks_remaining} {_('blocks remaining')})"
+                text = f"{_(path_name)}: {_(description)} {_('after block')} {locktime} ({blocks_remaining} {_('blocks remaining')})"
                 color = ColorScheme.RED.as_color().name()
             else:
-                text = f"🔓 {_(path_name)}: {_(description)} {_('available now')}"
+                text = f"{_(path_name)}: {_(description)} {_('available now')}"
                 color = ColorScheme.GREEN.as_color().name()
         
         label = WWLabel(text)
@@ -549,13 +549,13 @@ class CLTVAddressDialog(WindowModalDialog, QtEventListener):
         try:
             contract_name, _ = parse_script_id(script_type)
         except ValueError:
-            logger.warning(f"[WARNING] ⚠️  Unknown script type: {script_type}")
+            logger.warning(f"[WARNING] Unknown script type: {script_type}")
             return {}
         
         # Get contract definition (single source of truth)
         contract = CONTRACTS.get(contract_name)
         if not contract:
-            logger.warning(f"[WARNING] ⚠️  Unknown contract: {contract_name}")
+            logger.warning(f"[WARNING] Unknown contract: {contract_name}")
             return {}
         
         # Extract parameters (v12.0.0 format: nested params dict)
@@ -569,9 +569,9 @@ class CLTVAddressDialog(WindowModalDialog, QtEventListener):
         missing = [p for p in required_params if params.get(p) is None]
         
         if missing:
-            logger.warning(f"[WARNING] ⚠️  Broken address: {self.address[:20]}...")
-            logger.warning(f"[WARNING] ⚠️  Missing required parameters: {', '.join(missing)}")
-            logger.warning(f"[WARNING] ⚠️  Cannot sweep - address must be recreated")
+            logger.warning(f"[WARNING] Broken address: {self.address[:20]}...")
+            logger.warning(f"[WARNING] Missing required parameters: {', '.join(missing)}")
+            logger.warning(f"[WARNING] Cannot sweep - address must be recreated")
         
         return params
     
@@ -1203,7 +1203,7 @@ class CLTVAddressDialog(WindowModalDialog, QtEventListener):
         
         Returns a QFrame containing:
         - Path icon and name
-        - Details button (ℹ️) - shows miniscript, keys, technical info
+        - Details button (i) - shows miniscript, keys, technical info
         - Sweep button - executes the sweep
         """
         logger.info(f"[DIALOG] _create_path_button_from_definition() for '{path.name}'...")
@@ -1288,7 +1288,7 @@ class CLTVAddressDialog(WindowModalDialog, QtEventListener):
         row_layout.addStretch()
         
         # Details button - use Electrum's native OkButton style (info variant)
-        details_btn = OkButton(self, "ℹ")
+        details_btn = OkButton(self, "i")
         details_btn.setFixedSize(28, 28)
         details_btn.setToolTip(_("Show path details (miniscript, keys, etc.)"))
         
@@ -1514,7 +1514,7 @@ class CLTVAddressDialog(WindowModalDialog, QtEventListener):
             # Warn user that data will become public
             if path_info.warning:
                 self.show_message(
-                    _("⚠️ WARNING: Data Revelation\n\n") +
+                    _("WARNING: Data Revelation\n\n") +
                     _(path_info.warning) + "\n\n" +
                     _("Data preimage (hex): ") + data_preimage[:40] + ("..." if len(data_preimage) > 40 else "") + "\n\n" +
                     _("If you understand and want to continue, click OK to proceed.")
@@ -1707,10 +1707,10 @@ class CLTVAddressDialog(WindowModalDialog, QtEventListener):
             
             # If address is broken, block sweep with helpful error
             if broken_reasons:
-                logger.error(f"[ERROR] ❌ Cannot sweep broken address")
+                logger.error(f"[ERROR] Cannot sweep broken address")
                 for reason in broken_reasons:
-                    logger.error(f"[ERROR] ❌ {reason}")
-                logger.error(f"[ERROR] ❌ This address was created before parameter storage fix")
+                    logger.error(f"[ERROR] {reason}")
+                logger.error(f"[ERROR] This address was created before parameter storage fix")
                 
                 reasons_text = '\n'.join(f'  • {r}' for r in broken_reasons)
                 return {
@@ -1847,14 +1847,14 @@ class CLTVAddressDialog(WindowModalDialog, QtEventListener):
                                         logger.info(f"[KEY_LOOKUP] Checking {wallet_addr}: {wallet_pubkey}")
                                         if wallet_pubkey.upper() == pubkey_hex.upper():
                                             # Found matching address - get its private key
-                                            logger.info(f"[KEY_LOOKUP] ✓ Match found: {wallet_addr}")
+                                            logger.info(f"[KEY_LOOKUP] Match found: {wallet_addr}")
                                             # Get private key using Electrum's API
                                             wif_key = self.wallet.export_private_key(wallet_addr, password=None)
                                             from electrum.bitcoin import deserialize_privkey
                                             from electrum_ecc import ECPrivkey
                                             txin_type, privkey_bytes, compressed = deserialize_privkey(wif_key)
                                             found_key = ECPrivkey(privkey_bytes)
-                                            logger.info(f"[KEY_LOOKUP] ✓ Private key retrieved")
+                                            logger.info(f"[KEY_LOOKUP] Private key retrieved")
                                             break
                                 except Exception as e:
                                     logger.error(f"[KEY_LOOKUP] Error checking {wallet_addr}: {e}")
@@ -1919,7 +1919,7 @@ class CLTVAddressDialog(WindowModalDialog, QtEventListener):
                     logger.info(f"[BUILDER] Dynamic witness size: {witness_size} bytes (path: {path})")
                 except Exception as e:
                     # Fallback: estimate from contract structure
-                    logger.warning(f"[BUILDER] ⚠️ Dynamic witness calculation failed: {e}, estimating from contract")
+                    logger.warning(f"[BUILDER] Dynamic witness calculation failed: {e}, estimating from contract")
                     from ..cltv_lib.registry import parse_script_id
                     from ..cltv_lib.contracts import CONTRACTS
                     try:
@@ -1977,7 +1977,7 @@ class CLTVAddressDialog(WindowModalDialog, QtEventListener):
                 
                 # Sanity check: warn if estimates differ significantly
                 if hasattr(self, '_fee_calc_vsize') and abs(verify_vsize - self._fee_calc_vsize) > 5:
-                    logger.warning(f"[BUILDER] ⚠️ Size estimate mismatch: FeeCalculator={self._fee_calc_vsize}, actual={verify_vsize}")
+                    logger.warning(f"[BUILDER] Size estimate mismatch: FeeCalculator={self._fee_calc_vsize}, actual={verify_vsize}")
             
             logger.info(f"[{contract_name}] Signing {len(tx_inputs)} input(s)...")
             
@@ -1997,7 +1997,7 @@ class CLTVAddressDialog(WindowModalDialog, QtEventListener):
                     taproot_addr_info = regenerate_address_data(script_type, params)
                     logger.info(f"[BUILDER] Recomputed {script_type} address data via regenerator")
                 except Exception as e:
-                    logger.error(f"[BUILDER] ⚠️ Failed to regenerate Taproot address: {e}")
+                    logger.error(f"[BUILDER] Failed to regenerate Taproot address: {e}")
 
             for i, txin in enumerate(tx.inputs()):
                 logger.info(f"[BUILDER] Signing input {i+1}/{len(tx.inputs())}...")
@@ -2045,14 +2045,14 @@ class CLTVAddressDialog(WindowModalDialog, QtEventListener):
                     if 'leaf_scripts' in taproot_addr_info and leaf_key in taproot_addr_info['leaf_scripts']:
                         output['script_hex'] = taproot_addr_info['leaf_scripts'][leaf_key]
                         output['control_block_hex'] = taproot_addr_info['control_blocks'].get(leaf_key)
-                        logger.info(f"[BUILDER] ✓ Using leaf_scripts['{leaf_key}'] for path '{path}'")
+                        logger.info(f"[BUILDER] Using leaf_scripts['{leaf_key}'] for path '{path}'")
                     else:
                         # Single-path contracts: use top-level control block and script
                         if 'control_block_hex' not in taproot_addr_info:
                             raise ValueError(f"Missing control_block_hex in taproot_addr_info for {script_type}")
                         output['control_block_hex'] = taproot_addr_info['control_block_hex']
                         output['script_hex'] = taproot_addr_info.get('script_hex')
-                        logger.info(f"[BUILDER] ✓ Using top-level control_block_hex (single-path)")
+                        logger.info(f"[BUILDER] Using top-level control_block_hex (single-path)")
                     
                     if 'control_block_hex' not in output or not output['control_block_hex']:
                         raise ValueError(f"Failed to get control_block_hex for path '{script_path}' (original path: '{path}')")
@@ -2063,7 +2063,7 @@ class CLTVAddressDialog(WindowModalDialog, QtEventListener):
                     output['internal_key'] = taproot_addr_info['internal_key']
                     output['output_key'] = taproot_addr_info['output_key']
                     
-                    logger.info(f"[BUILDER] ✓ Using Taproot data (control_block: {output['control_block_hex'][:32]}..., script: {output['script_hex'][:32]}...)")
+                    logger.info(f"[BUILDER] Using Taproot data (control_block: {output['control_block_hex'][:32]}..., script: {output['script_hex'][:32]}...)")
                 
                 # Add data_preimage for data publishing (all variants)
                 if 'data_publishing' in script_type and 'data_preimage' in params:
@@ -2083,7 +2083,7 @@ class CLTVAddressDialog(WindowModalDialog, QtEventListener):
                     logger.info(f"[BUILDER]   Sighash computed: {sighash.hex()}")
                 except Exception as e:
                     # Fallback to manual computation if sweeper method fails
-                    logger.warning(f"[BUILDER] ⚠️ Sweeper sighash computation failed: {e}, using fallback")
+                    logger.warning(f"[BUILDER] Sweeper sighash computation failed: {e}, using fallback")
                     import traceback
                     traceback.print_exc()
                     if 'taproot' in script_type.lower():
@@ -2136,10 +2136,10 @@ class CLTVAddressDialog(WindowModalDialog, QtEventListener):
                 # If fee rate is too low, it's because our witness_sizehint was too small.
                 # The fee calculator adds a small buffer to prevent this.
                 if actual_fee_rate < 1.0:
-                    logger.warning(f"[BUILDER] ⚠️ WARNING: Fee rate {actual_fee_rate:.2f} < 1.0 sat/vbyte!")
-                    logger.warning(f"[BUILDER] ⚠️ Consider checking witness size calculation for '{script_type}' path '{path}'")
+                    logger.warning(f"[BUILDER] WARNING: Fee rate {actual_fee_rate:.2f} < 1.0 sat/vbyte!")
+                    logger.warning(f"[BUILDER] Consider checking witness size calculation for '{script_type}' path '{path}'")
             
-            logger.info(f"[{contract_name}] ✅ Transaction built successfully")
+            logger.info(f"[{contract_name}] Transaction built successfully")
             return {'success': True, 'tx': tx}
             
         except Exception as e:

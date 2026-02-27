@@ -147,11 +147,11 @@ class PathDetailsDialog(WindowModalDialog):
         # Locktime requirement
         if self.path.requires_locktime:
             locktime = self.params.get('locktime', 0)
-            lock_label = QLabel(f"⏰ {_('Requires locktime')}: {locktime}")
+            lock_label = QLabel(f"{_('Requires locktime')}: {locktime}")
             lock_label.setStyleSheet("color: #d35400; font-weight: bold;")
             layout.addWidget(lock_label)
         else:
-            lock_label = QLabel(f"✓ {_('Available anytime')}")
+            lock_label = QLabel(f"{_('Available anytime')}")
             lock_label.setStyleSheet("color: #27ae60; font-weight: bold;")
             layout.addWidget(lock_label)
         
@@ -343,7 +343,7 @@ class PathDetailsDialog(WindowModalDialog):
             layout.addWidget(multi_label)
             
             multi_text = (
-                "⚠️ This script uses OP_CHECKMULTISIG which has an off-by-one bug.\n"
+                "WARNING: This script uses OP_CHECKMULTISIG which has an off-by-one bug.\n"
                 "The witness must include a dummy OP_0 (empty element) at the bottom."
             )
             multi_info = self._create_copyable_text(multi_text)
@@ -403,7 +403,7 @@ class PathDetailsDialog(WindowModalDialog):
             key_role = self.contract.get_key_role(key_name)
             
             # Key icon and name
-            icon = key_role.icon if key_role else '🔑'
+            icon = key_role.icon if key_role else ''
             display_name = key_role.display_name if key_role else key_name.title()
             
             icon_label = QLabel(icon)
@@ -426,7 +426,7 @@ class PathDetailsDialog(WindowModalDialog):
                 value_label.setToolTip(key_value)  # Full value on hover
                 
                 # Copy button
-                copy_btn = QPushButton("📋")
+                copy_btn = QPushButton("Copy")
                 copy_btn.setFixedSize(24, 24)
                 copy_btn.setToolTip(_("Copy to clipboard"))
                 copy_btn.clicked.connect(lambda checked, v=key_value: self._copy_to_clipboard(v))
@@ -515,7 +515,7 @@ class PathDetailsDialog(WindowModalDialog):
         layout.addWidget(text_label, stretch=1)
         
         # Copy button
-        copy_btn = QPushButton("📋")
+        copy_btn = QPushButton("Copy")
         copy_btn.setFixedSize(28, 28)
         copy_btn.setToolTip(_("Copy to clipboard"))
         copy_btn.clicked.connect(lambda: self._copy_to_clipboard(text))

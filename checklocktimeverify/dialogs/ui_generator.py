@@ -163,7 +163,7 @@ def generate_path_button(
         btn.setStyleSheet(_get_disabled_button_style())
     elif path.requires_locktime and is_locked:
         btn.setEnabled(False)
-        tooltip = _(f"🔒 Available after block {locktime} ({blocks_remaining} blocks remaining)")
+        tooltip = _(f"Available after block {locktime} ({blocks_remaining} blocks remaining)")
         btn.setToolTip(tooltip)
         btn.setStyleSheet(_get_locked_button_style())
     else:
@@ -302,8 +302,8 @@ def generate_path_status_list(
     Generate a list showing status of all spending paths.
     
     Shows each path with its availability status:
-    - ✅ Available now
-    - 🔒 Locked (X blocks remaining)
+    - Available now
+    - Locked (X blocks remaining)
     
     Args:
         contract: ContractDefinition
@@ -344,10 +344,10 @@ def _create_locktime_status(
 ):
     """Create locktime status label."""
     if is_locked:
-        text = f"🔒 Locked until block {locktime} ({blocks_remaining} blocks remaining)"
+        text = f"Locked until block {locktime} ({blocks_remaining} blocks remaining)"
         color = ColorScheme.RED.as_color().name()
     else:
-        text = f"🔓 Unlocked (locktime {locktime} passed)"
+        text = f"Unlocked (locktime {locktime} passed)"
         color = ColorScheme.GREEN.as_color().name()
     
     label = WWLabel(text)
@@ -362,12 +362,12 @@ def _create_balance_display(balance: int, config: Any = None):
             balance_text = config.format_amount_and_units(balance)
         else:
             balance_text = f"{balance:,} sat"
-        text = f"💰 Balance: {balance_text}"
+        text = f"Balance: {balance_text}"
         color = ColorScheme.GREEN.as_color().name()
     else:
         # Clean zero display (avoid Electrum's "0." format issue)
         base_unit = config.get_base_unit() if config and hasattr(config, 'get_base_unit') else 'sat'
-        text = f"💰 Balance: 0 {base_unit} (unfunded)"
+        text = f"Balance: 0 {base_unit} (unfunded)"
         color = ColorScheme.GRAY.as_color().name()
     
     label = WWLabel(text)
@@ -395,17 +395,17 @@ def _get_path_status(
     """Get status text and color for a path."""
     if not path.requires_locktime:
         return {
-            'text': f"✅ {_(path.display_name)}: {_(path.description)}",
+            'text': f"{_(path.display_name)}: {_(path.description)}",
             'color': ColorScheme.GREEN.as_color().name()
         }
     elif is_locked:
         return {
-            'text': f"🔒 {_(path.display_name)}: {_('after block')} {locktime} ({blocks_remaining} {_('blocks remaining')})",
+            'text': f"{_(path.display_name)}: {_('after block')} {locktime} ({blocks_remaining} {_('blocks remaining')})",
             'color': ColorScheme.RED.as_color().name()
         }
     else:
         return {
-            'text': f"🔓 {_(path.display_name)}: {_('available now')}",
+            'text': f"{_(path.display_name)}: {_('available now')}",
             'color': ColorScheme.GREEN.as_color().name()
         }
 
