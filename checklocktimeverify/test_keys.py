@@ -65,28 +65,8 @@ TEST_KEYS = {
         'description': 'Data publisher (reveals preimage)'
     },
     'buyer': {
-        'privkey_hex': '0000000000000000000000000000000000000000000000000000000061',
+        'privkey_hex': '0000000000000000000000000000000000000000000000000000000000000061',
         'description': 'Data buyer (can refund after timeout)'
-    },
-    'member1': {
-        'privkey_hex': '0000000000000000000000000000000000000000000000080',
-        'description': 'Decaying multisig member 1'
-    },
-    'member2': {
-        'privkey_hex': '0000000000000000000000000000000000000000000081',
-        'description': 'Decaying multisig member 2'
-    },
-    'member3': {
-        'privkey_hex': '0000000000000000000000000000000000000000000082',
-        'description': 'Decaying multisig member 3'
-    },
-    'member4': {
-        'privkey_hex': '0000000000000000000000000000000000000000083',
-        'description': 'Decaying multisig member 4'
-    },
-    'member5': {
-        'privkey_hex': '0000000000000000000000000000000000000000084',
-        'description': 'Decaying multisig member 5'
     }
 }
 
@@ -186,11 +166,6 @@ _CACHED_PUBKEYS = {
     'receiver': get_test_pubkey('receiver'),
     'publisher': get_test_pubkey('publisher'),
     'buyer': get_test_pubkey('buyer'),
-    'member1': get_test_pubkey('member1'),
-    'member2': get_test_pubkey('member2'),
-    'member3': get_test_pubkey('member3'),
-    'member4': get_test_pubkey('member4'),
-    'member5': get_test_pubkey('member5'),
 }
 
 
