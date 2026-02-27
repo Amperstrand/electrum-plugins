@@ -144,7 +144,7 @@ def broadcast_transaction(
             if not txid or len(txid) != 64:
                 raise Exception(f"Invalid TXID from broadcast: {txid}")
             
-            print(f"✅ Sweep successful!")
+ print(f" Sweep successful!")
             print(f"   Sweep TXID: {txid}")
             
             # Update state if provided
@@ -169,7 +169,7 @@ def broadcast_transaction(
                     _lt = locktime if locktime is not None else (test_data.get('locktime') if test_data else None)
                     if _lt is not None:
                         blocks_remaining = _lt - current_height
-                        print(f"\n🔒 TIMELOCK REJECTION (EXPECTED - This demonstrates BIP-65 enforcement)")
+ print(f"\n TIMELOCK REJECTION (EXPECTED - This demonstrates BIP-65 enforcement)")
                         print(f"   ════════════════════════════════════════════════════════════")
                         print(f"   Bitcoin nodes rejected this transaction because:")
                         print(f"   • Current height: {current_height}")
@@ -184,14 +184,14 @@ def broadcast_transaction(
                         return None
                 
                 # Fallback message if we don't have detailed context
-                print(f"\n🔒 Transaction rejected: Timelock not yet reached (EXPECTED)")
+ print(f"\n Transaction rejected: Timelock not yet reached (EXPECTED)")
                 print(f"   This demonstrates BIP-65 CHECKLOCKTIMEVERIFY enforcement")
                 print(f"   Error: {error_msg}")
                 return None
             
             else:
                 # REAL ERROR: Something actually went wrong
-                print(f"❌ Broadcast failed: {error_msg}")
+ print(f" Broadcast failed: {error_msg}")
                 raise Exception(f"Broadcast failed: {error_msg}")
     
     except subprocess.TimeoutExpired:

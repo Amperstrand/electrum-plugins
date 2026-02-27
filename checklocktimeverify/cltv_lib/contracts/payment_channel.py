@@ -27,7 +27,7 @@ PAYMENT_CHANNEL = ContractDefinition(
     bip_reference="BIP-65 Example #4: Payment Channel",
     short_description="Bi-directional payment channel with refund timeout",
     use_cases=["Micro-payments", "Streaming payments", "Off-chain transactions"],
-    icon="💸",
+ icon="",
     
     paths=[
         SpendingPath(
@@ -51,8 +51,8 @@ PAYMENT_CHANNEL = ContractDefinition(
     ],
     
     key_roles=[
-        KeyRole("sender", "Sender", "The party funding the channel", "📤"),
-        KeyRole("receiver", "Receiver", "The party receiving payments", "📥"),
+ KeyRole("sender", "Sender", "The party funding the channel", ""),
+ KeyRole("receiver", "Receiver", "The party receiving payments", ""),
     ],
 )
 

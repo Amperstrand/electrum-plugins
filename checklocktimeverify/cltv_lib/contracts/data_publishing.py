@@ -36,7 +36,7 @@ DATA_PUBLISHING = ContractDefinition(
     bip_reference="BIP-65 Example #5: Data Publishing (PayPub)",
     short_description="Pay for data: Publisher reveals preimage to claim, or buyer refunds",
     use_cases=["Paid data release", "Encryption key sale", "Trustless data exchange"],
-    icon="📝",
+ icon="",
     
     paths=[
         SpendingPath(
@@ -47,7 +47,7 @@ DATA_PUBLISHING = ContractDefinition(
             required_keys=["publisher"],
             is_cooperative=True,
             requires_preimage=True,
-            warning="⚠️ This will reveal your data on the blockchain permanently!",
+ warning=" This will reveal your data on the blockchain permanently!",
             leaf_index=0,
         ),
         SpendingPath(
@@ -62,8 +62,8 @@ DATA_PUBLISHING = ContractDefinition(
     ],
     
     key_roles=[
-        KeyRole("publisher", "Publisher", "Sells the data", "📤"),
-        KeyRole("buyer", "Buyer", "Pays for the data", "💰"),
+ KeyRole("publisher", "Publisher", "Sells the data", ""),
+ KeyRole("buyer", "Buyer", "Pays for the data", ""),
     ],
 )
 

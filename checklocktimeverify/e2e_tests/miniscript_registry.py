@@ -5,9 +5,9 @@ This module provides backward-compatible APIs for E2E tests while importing
 from the new cltv_lib.descriptors module.
 
 MIGRATION STATUS (Phase 2):
-- ✅ All functions now delegate to cltv_lib.descriptors
-- ✅ Tests use production library code
-- ✅ Backward compatibility maintained
+- All functions now delegate to cltv_lib.descriptors
+- Tests use production library code
+- Backward compatibility maintained
 
 After all tests verified, this shim can be removed and tests updated to
 import directly from cltv_lib.descriptors.

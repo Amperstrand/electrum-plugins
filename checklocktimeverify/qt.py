@@ -407,7 +407,7 @@ class Plugin(BasePlugin):
                 if not registered and hasattr(wallet, 'import_address'):
                     try:
                         wallet.import_address(addr)
-                        logger.info(f"[CLTV] [WALLET] ✓ Registered via import_address: {addr[:20]}...")
+ logger.info(f"[CLTV] [WALLET] Registered via import_address: {addr[:20]}...")
                         registered_count += 1
                         registered = True
                     except AttributeError:
@@ -419,19 +419,19 @@ class Plugin(BasePlugin):
                 if not registered and hasattr(wallet, 'adb') and hasattr(wallet.adb, 'add_address'):
                     try:
                         wallet.adb.add_address(addr)
-                        logger.info(f"[CLTV] [WALLET] ✓ Registered via ADB.add_address: {addr[:20]}...")
+ logger.info(f"[CLTV] [WALLET] Registered via ADB.add_address: {addr[:20]}...")
                         registered_count += 1
                         registered = True
                     except Exception as e:
-                        logger.warning(f"[CLTV] [WALLET] ⚠️  ADB.add_address failed for {addr[:20]}...: {e}")
+ logger.warning(f"[CLTV] [WALLET] ADB.add_address failed for {addr[:20]}...: {e}")
                 
                 if not registered:
-                    logger.warning(f"[CLTV] [WALLET] ⚠️  No registration method worked for: {addr[:20]}...")
+ logger.warning(f"[CLTV] [WALLET] No registration method worked for: {addr[:20]}...")
             
             # Trigger network sync if any addresses were registered
             if registered_count > 0:
                 self._trigger_wallet_sync(wallet)
-                logger.info(f"[CLTV] [WALLET] ✓ Registered {registered_count} CLTV addresses with Electrum")
+ logger.info(f"[CLTV] [WALLET] Registered {registered_count} CLTV addresses with Electrum")
             
         except Exception as e:
             logger.error(f"[CLTV] [WALLET] Error registering addresses: {e}")
@@ -443,7 +443,7 @@ class Plugin(BasePlugin):
             if hasattr(wallet, 'synchronize'):
                 try:
                     wallet.synchronize()
-                    logger.debug(f"[CLTV] [SYNC] ✓ Triggered wallet sync")
+ logger.debug(f"[CLTV] [SYNC] Triggered wallet sync")
                     return
                 except Exception as e:
                     logger.debug(f"[CLTV] [SYNC] Wallet synchronize failed: {e}")
@@ -454,7 +454,7 @@ class Plugin(BasePlugin):
                 if hasattr(adb, 'synchronizer') and adb.synchronizer:
                     if hasattr(adb.synchronizer, 'synchronize'):
                         adb.synchronizer.synchronize()
-                        logger.info(f"[CLTV] [SYNC] ✓ Triggered ADB synchronizer sync")
+ logger.info(f"[CLTV] [SYNC] Triggered ADB synchronizer sync")
                         
         except Exception as e:
             logger.debug(f"[CLTV] [SYNC] Could not trigger sync: {e}")
@@ -588,7 +588,7 @@ class Plugin(BasePlugin):
             # Initial data load
             self.cltv_list.update_rows.emit(window.wallet)
             
-            logger.info(f"[CLTV] [TAB] ✅ CLTV tab added successfully")
+ logger.info(f"[CLTV] [TAB] CLTV tab added successfully")
             
         except Exception as e:
             logger.error(f"[CLTV] [TAB] [ERROR] Failed to add CLTV tab: {e}")
@@ -708,8 +708,8 @@ class Plugin(BasePlugin):
             ValueError: If required parameters are missing or invalid
         """
         script_type = data.get('script_type', 'unknown')
-        logger.info(f"[CLTV] [STORAGE] 💾 Saving {script_type} address {address[:20]}...")
-        logger.debug(f"[CLTV] [STORAGE] 🔍 DEBUG: Incoming data keys: {list(data.keys())}")
+ logger.info(f"[CLTV] [STORAGE] Saving {script_type} address {address[:20]}...")
+ logger.debug(f"[CLTV] [STORAGE] DEBUG: Incoming data keys: {list(data.keys())}")
         
         # Get plugin storage from wallet.db
         if not hasattr(wallet, 'db'):
@@ -717,77 +717,77 @@ class Plugin(BasePlugin):
         
         plugin_storage = wallet.db.get_plugin_storage()
         cltv_data = plugin_storage.get('checklocktimeverify', {})
+        
+        # Initialize structure if needed
+        if not cltv_data or 'addresses' not in cltv_data:
+            cltv_data = {'addresses': {}}
+        
+        # Get contract definition (single source of truth)
+        script_type = data.get('script_type', 'cltv_hodl_p2wsh')
+        
+        try:
+            from .cltv_lib.registry import parse_script_id
+            from .cltv_lib.contracts import CONTRACTS
             
-            # Initialize structure if needed
-            if not cltv_data or 'addresses' not in cltv_data:
-                cltv_data = {'addresses': {}}
+            contract_name, output_type = parse_script_id(script_type)
+            contract = CONTRACTS.get(contract_name)
             
-            # Get contract definition (single source of truth)
-            script_type = data.get('script_type', 'cltv_hodl_p2wsh')
+            if not contract:
+                raise BitcoinException(f"Unknown contract: {contract_name} (from script_type: {script_type})")
             
-            try:
-                from .cltv_lib.registry import parse_script_id
-                from .cltv_lib.contracts import CONTRACTS
-                
-                contract_name, output_type = parse_script_id(script_type)
-                contract = CONTRACTS.get(contract_name)
-                
-                if not contract:
-                    raise BitcoinException(f"Unknown contract: {contract_name} (from script_type: {script_type})")
-                
-                required_params = contract.get_required_param_names()
-                logger.info(f"[CLTV] [STORAGE] 📋 Contract requires: {required_params}")
-                
-                # Extract params from nested or flat format
-                params = {}
-                
-                if 'params' in data and isinstance(data['params'], dict):
-                    logger.debug(f"[CLTV] [STORAGE] 🔍 Found nested params, extracting...")
-                    nested_params = data['params']
-                    for param_name in required_params:
-                        if param_name in nested_params:
-                            params[param_name] = nested_params[param_name]
-                            logger.info(f"[CLTV] [STORAGE] ✓ Found {param_name}: {str(nested_params[param_name])[:40]}...")
-                        else:
-                            logger.error(f"[CLTV] [STORAGE] ❌ Missing required param: {param_name}")
-                else:
-                    # Extract from flat data
-                    for param_name in required_params:
-                        if param_name in data:
-                            params[param_name] = data[param_name]
-                            logger.info(f"[CLTV] [STORAGE] ✓ Found {param_name}: {str(data[param_name])[:40]}...")
-                        else:
-                            logger.error(f"[CLTV] [STORAGE] ❌ Missing required param: {param_name}")
-                
-                # Validate extracted parameters
-                missing = [p for p in required_params if params.get(p) is None]
-                if missing:
-                    raise BitcoinException(f"Missing required parameters: {missing}. Available keys: {list(data.keys())}")
-                
-                logger.info(f"[CLTV] [STORAGE] ✅ All required parameters present")
-                    
-            except ValueError as e:
-                # Unknown script type - cannot proceed
-                raise BitcoinException(f"Invalid script type: {script_type} - {e}")
+            required_params = contract.get_required_param_names()
+ logger.info(f"[CLTV] [STORAGE] Contract requires: {required_params}")
             
-            # Validate critical parameters
-            if 'locktime' in params:
-                locktime = params['locktime']
-                if locktime is None:
-                    logger.warning(f"[CLTV] [STORAGE] [WARNING] locktime is None, defaulting to 0")
-                    params['locktime'] = 0
-                elif not isinstance(locktime, int):
-                    logger.warning(f"[CLTV] [STORAGE] [WARNING] locktime is {type(locktime)}, converting to int")
-                    params['locktime'] = int(locktime)
+            # Extract params from nested or flat format
+            params = {}
             
-            # Log extracted params for debugging
-            param_summary = {k: (v if not isinstance(v, str) or len(v) < 20 else f"{v[:20]}...") 
-                            for k, v in params.items()}
-            logger.info(f"[CLTV] [STORAGE] Extracted params: {param_summary}")
+            if 'params' in data and isinstance(data['params'], dict):
+ logger.debug(f"[CLTV] [STORAGE] Found nested params, extracting...")
+                nested_params = data['params']
+                for param_name in required_params:
+                    if param_name in nested_params:
+                        params[param_name] = nested_params[param_name]
+ logger.info(f"[CLTV] [STORAGE] Found {param_name}: {str(nested_params[param_name])[:40]}...")
+                    else:
+ logger.error(f"[CLTV] [STORAGE] Missing required param: {param_name}")
+            else:
+                # Extract from flat data
+                for param_name in required_params:
+                    if param_name in data:
+                        params[param_name] = data[param_name]
+ logger.info(f"[CLTV] [STORAGE] Found {param_name}: {str(data[param_name])[:40]}...")
+                    else:
+ logger.error(f"[CLTV] [STORAGE] Missing required param: {param_name}")
             
-            # Add key_source tracking (optional metadata, not used for regeneration)
-            if 'key_source' in data:
-                params['key_source'] = data['key_source']
+            # Validate extracted parameters
+            missing = [p for p in required_params if params.get(p) is None]
+            if missing:
+                raise BitcoinException(f"Missing required parameters: {missing}. Available keys: {list(data.keys())}")
+            
+ logger.info(f"[CLTV] [STORAGE] All required parameters present")
+                
+        except ValueError as e:
+            # Unknown script type - cannot proceed
+            raise BitcoinException(f"Invalid script type: {script_type} - {e}")
+        
+        # Validate critical parameters
+        if 'locktime' in params:
+            locktime = params['locktime']
+            if locktime is None:
+                logger.warning(f"[CLTV] [STORAGE] [WARNING] locktime is None, defaulting to 0")
+                params['locktime'] = 0
+            elif not isinstance(locktime, int):
+                logger.warning(f"[CLTV] [STORAGE] [WARNING] locktime is {type(locktime)}, converting to int")
+                params['locktime'] = int(locktime)
+        
+        # Log extracted params for debugging
+        param_summary = {k: (v if not isinstance(v, str) or len(v) < 20 else f"{v[:20]}...") 
+                        for k, v in params.items()}
+        logger.info(f"[CLTV] [STORAGE] Extracted params: {param_summary}")
+        
+        # Add key_source tracking (optional metadata, not used for regeneration)
+        if 'key_source' in data:
+            params['key_source'] = data['key_source']
             
             # Build minimal address entry - only store script_type + params
             # Everything else is derived on-demand via regenerate_address_data()
@@ -820,7 +820,7 @@ class Plugin(BasePlugin):
                 regenerated = regenerate_address_data(script_type, params)
                 cache_entry.update(regenerated)
             except Exception as e:
-                logger.warning(f"[CLTV] [STORAGE] ⚠️  Failed to regenerate for cache: {e}")
+ logger.warning(f"[CLTV] [STORAGE] Failed to regenerate for cache: {e}")
             
             self.update_address_cache(wallet, address, cache_entry)
             
@@ -832,7 +832,7 @@ class Plugin(BasePlugin):
             self._register_addresses_with_wallet(wallet, address=address)
             
             action = "Updated" if is_update else "Saved"
-            logger.info(f"[CLTV] [STORAGE] ✓ {action} {script_type} ({len(cltv_data['addresses'])} total)")
+ logger.info(f"[CLTV] [STORAGE] {action} {script_type} ({len(cltv_data['addresses'])} total)")
     
     def load_all_addresses(self, wallet, use_cache: bool = True) -> List[Dict]:
         """Load all saved CLTV addresses from wallet.db
@@ -865,7 +865,7 @@ class Plugin(BasePlugin):
             storage_version = cltv_data.get('version')
             if storage_version != '12.0.0':
                 version_str = storage_version if storage_version else '(not set)'
-                logger.info(f"[CLTV] [STORAGE] ⏭️  Skipping addresses (storage version {version_str}, expected 12.0.0)")
+ logger.info(f"[CLTV] [STORAGE] Skipping addresses (storage version {version_str}, expected 12.0.0)")
                 return []
             
             # Load addresses (v12.0.0 format only - script_type + params)
@@ -880,7 +880,7 @@ class Plugin(BasePlugin):
                 # Skip addresses without required fields
                 if not script_type or not params:
                     skipped_count += 1
-                    logger.info(f"[CLTV] [STORAGE] ⏭️  Skipping {addr[:20]}... (missing script_type or params)")
+ logger.info(f"[CLTV] [STORAGE] Skipping {addr[:20]}... (missing script_type or params)")
                     continue
                 
                 # Regenerate full address data from script_type + params
@@ -901,19 +901,19 @@ class Plugin(BasePlugin):
                     tb_str = traceback.format_exc()
                     
                     # Log full error details for debugging
-                    logger.error(f"[CLTV] [STORAGE] ❌ CRITICAL: Failed to regenerate address {addr[:20]}...")
-                    logger.error(f"[CLTV] [STORAGE] ❌   Script Type: {script_type}")
-                    logger.error(f"[CLTV] [STORAGE] ❌   Params: {params}")
-                    logger.error(f"[CLTV] [STORAGE] ❌   Error: {regen_err}")
-                    logger.error(f"[CLTV] [STORAGE] ❌   Traceback:\n{tb_str}")
-                    logger.error(f"[CLTV] [STORAGE] ❌   This address cannot be loaded and will be skipped.")
+ logger.error(f"[CLTV] [STORAGE] CRITICAL: Failed to regenerate address {addr[:20]}...")
+ logger.error(f"[CLTV] [STORAGE] Script Type: {script_type}")
+ logger.error(f"[CLTV] [STORAGE] Params: {params}")
+ logger.error(f"[CLTV] [STORAGE] Error: {regen_err}")
+ logger.error(f"[CLTV] [STORAGE] Traceback:\n{tb_str}")
+ logger.error(f"[CLTV] [STORAGE] This address cannot be loaded and will be skipped.")
                     # Don't add to addresses list - address is broken
             
             # Log summary
             if skipped_count > 0:
-                logger.info(f"[CLTV] [STORAGE] ⏭️  Skipped {skipped_count} addresses (missing required fields)")
+ logger.info(f"[CLTV] [STORAGE] Skipped {skipped_count} addresses (missing required fields)")
             if failed_count > 0:
-                logger.error(f"[CLTV] [STORAGE] ❌ FAILED to load {failed_count} addresses (regeneration errors - see logs above)")
+ logger.error(f"[CLTV] [STORAGE] FAILED to load {failed_count} addresses (regeneration errors - see logs above)")
             
             # Cache the result
             if not hasattr(self, '_address_cache'):
@@ -928,7 +928,7 @@ class Plugin(BasePlugin):
             except Exception as e:
                 logger.info(f"[CLTV] [WALLET] Could not register addresses on load: {e}")
             
-            logger.info(f"[CLTV] [STORAGE] ✓ Loaded {len(addresses)} addresses (with regeneration)")
+ logger.info(f"[CLTV] [STORAGE] Loaded {len(addresses)} addresses (with regeneration)")
             
             # Debug: Show breakdown by script type
             type_counts = {}
@@ -936,7 +936,7 @@ class Plugin(BasePlugin):
                 st = addr.get('script_type', 'unknown')
                 type_counts[st] = type_counts.get(st, 0) + 1
             if type_counts:
-                logger.info(f"[CLTV] [STORAGE] 📊 Breakdown: {dict(sorted(type_counts.items()))}")
+ logger.info(f"[CLTV] [STORAGE] Breakdown: {dict(sorted(type_counts.items()))}")
             
             return addresses
             
@@ -997,7 +997,7 @@ class Plugin(BasePlugin):
                     regenerated = regenerate_address_data(script_type, params)
                     address_data.update(regenerated)
             except Exception as e:
-                logger.warning(f"[CLTV] [CACHE] ⚠️  Failed to regenerate {address[:20]}: {e}")
+ logger.warning(f"[CLTV] [CACHE] Failed to regenerate {address[:20]}: {e}")
         
         # Update or append to cache
         if existing_idx is not None:
@@ -1033,7 +1033,7 @@ class Plugin(BasePlugin):
                 plugin_storage['checklocktimeverify'] = cltv_data
                 wallet.db.write()
                 self.invalidate_address_cache(wallet)
-                logger.info(f"[CLTV] [CLEANUP] 🗑️  Deleted address: {address[:30]}...")
+ logger.info(f"[CLTV] [CLEANUP] Deleted address: {address[:30]}...")
                 return True
             
             return False
@@ -1081,7 +1081,7 @@ class Plugin(BasePlugin):
     def cleanup_all_addresses(self, wallet) -> Dict:
         """Remove ALL CLTV addresses from wallet (full reset).
         
-        ⚠️  WARNING: This deletes all addresses, including valid ones!
+ WARNING: This deletes all addresses, including valid ones!
         
         Args:
             wallet: Wallet instance
@@ -1089,7 +1089,7 @@ class Plugin(BasePlugin):
         Returns:
             {'deleted': int, 'addresses': list}
         """
-        logger.warning(f"[CLTV] [CLEANUP] ⚠️  WARNING: Deleting ALL CLTV addresses!")
+ logger.warning(f"[CLTV] [CLEANUP] WARNING: Deleting ALL CLTV addresses!")
         
         try:
             if not hasattr(wallet, 'db'):
@@ -1110,7 +1110,7 @@ class Plugin(BasePlugin):
             wallet.db.write()
             self.invalidate_address_cache(wallet)
             
-            logger.info(f"[CLTV] [CLEANUP] 🗑️  Deleted ALL {count} CLTV addresses")
+ logger.info(f"[CLTV] [CLEANUP] Deleted ALL {count} CLTV addresses")
             return {'deleted': count, 'addresses': all_addrs}
             
         except Exception as e:
@@ -1151,7 +1151,7 @@ class Plugin(BasePlugin):
         if privkey_hex is None:
             raise BitcoinException("Private key not available for signing")
         
-        logger.info(f"[CLTV] [SIGN] 🔐 Signing {len(tx.inputs())} input(s)...")
+ logger.info(f"[CLTV] [SIGN] Signing {len(tx.inputs())} input(s)...")
         
         privkey = ecc.ECPrivkey(bytes.fromhex(privkey_hex))
         
@@ -1378,7 +1378,7 @@ class Plugin(BasePlugin):
                 result = network.run_from_another_thread(network.broadcast_transaction(tx))
                 txid = tx.txid()
                 
-                logger.info(f"[CLTV] [FUND] ✅ Successfully funded {len(unfunded)} addresses")
+ logger.info(f"[CLTV] [FUND] Successfully funded {len(unfunded)} addresses")
                 logger.info(f"[CLTV] [FUND]    TXID: {txid}")
                 for i, addr in enumerate(unfunded):
                     logger.info(f"[CLTV] [FUND]    [{i+1}] {addr[:30]}... = {amount} sats")

@@ -131,6 +131,16 @@ def get_keys_for_contract(contract_name: str, fixtures: Dict[str, Any]) -> Dict[
         publisher, buyer = fixtures['data_publishing_keypairs']()
         return {'publisher': publisher, 'buyer': buyer}
     
+    elif contract_name == 'decaying_multisig':
+        multisig_keypairs = fixtures['multisig_keypairs']()
+        return {
+            'member1': multisig_keypairs[0],
+            'member2': multisig_keypairs[1], 
+            'member3': multisig_keypairs[2],
+            'member4': multisig_keypairs[3],
+            'member5': multisig_keypairs[4]
+        }
+    
     else:
         raise ValueError(f"Unknown contract: {contract_name}")
 
@@ -181,6 +191,7 @@ def test_contract(
     twofactor_keypairs,
     payment_keypairs,
     data_publishing_keypairs,
+    multisig_keypairs,
     test_data_preimage,
     locktime_value,
     current_height,
@@ -202,6 +213,7 @@ def test_contract(
         'twofactor_keypairs': twofactor_keypairs,
         'payment_keypairs': payment_keypairs,
         'data_publishing_keypairs': data_publishing_keypairs,
+        'multisig_keypairs': multisig_keypairs,
         'test_data_preimage': test_data_preimage,
     }
     
@@ -234,13 +246,13 @@ def test_contract(
         if status == 'FUNDED':
             _handle_funded_test(test_data, state, current_height, path)
         elif status == 'SWEPT':
-            print(f"✅ Already swept! TX: {test_data.get('sweep_txid')}")
+ print(f" Already swept! TX: {test_data.get('sweep_txid')}")
         
         return
     
     # Generate new test
     print(f"\n{'='*80}")
-    print(f"🧪 NEW TEST #{test_number}: {contract_name.title()} {output_type.upper()} ({path.display_name})")
+ print(f" NEW TEST #{test_number}: {contract_name.title()} {output_type.upper()} ({path.display_name})")
     print(f"{'='*80}")
     
     # Get keys and params (use test_locktime for unique address)
@@ -271,7 +283,7 @@ def test_contract(
     state.save()
     
     # Print summary
-    print(f"\n✅ Test #{test_number} Created:")
+ print(f"\n Test #{test_number} Created:")
     print(f"   Contract: {CONTRACTS[contract_name].name}")
     print(f"   Output Type: {output_type.upper()}")
     print(f"   Path: {path.display_name}")
@@ -280,12 +292,12 @@ def test_contract(
     print(f"   Requires Locktime: {'Yes' if path.requires_locktime else 'No'}")
     print(f"   Amount: {get_test_amount(test_number)} sats")
     print(f"\n   Required Keys: {', '.join(path.required_keys)}")
-    print(f"   ⚠️  UNIQUE ADDRESS per test - fund this specific address")
+ print(f" UNIQUE ADDRESS per test - fund this specific address")
 
 
 def _handle_funded_test(test_data: dict, state: StateManager, current_height: int, path: SpendingPath):
     """Handle funded test - attempt sweep if conditions met."""
-    print(f"\n✅ Test funded!")
+ print(f"\n Test funded!")
     print(f"   TX: {test_data.get('funding_txid')}")
     print(f"   Amount: {test_data.get('amount_sats')} sats")
     
@@ -296,15 +308,15 @@ def _handle_funded_test(test_data: dict, state: StateManager, current_height: in
     is_locked = current_height < locktime
     if is_locked and path.requires_locktime:
         blocks_remaining = locktime - current_height
-        print(f"   🔒 Locked: {blocks_remaining} blocks until height {locktime}")
-        print(f"   ⏳ Path '{path_name}' requires locktime - skipping")
+ print(f" Locked: {blocks_remaining} blocks until height {locktime}")
+ print(f" Path '{path_name}' requires locktime - skipping")
         return
     
     if is_locked and not path.requires_locktime:
-        print(f"   ✅ Path '{path_name}' is cooperative - can sweep now!")
+ print(f" Path '{path_name}' is cooperative - can sweep now!")
     
     # Attempt sweep
-    print(f"\n🧹 Sweeping via path: {path_name}")
+ print(f"\n Sweeping via path: {path_name}")
     
     destination = get_sweep_destination(test_data)
     
@@ -318,7 +330,7 @@ def _handle_funded_test(test_data: dict, state: StateManager, current_height: in
         )
         
         if sweep_txid:
-            print(f"✅ Sweep successful!")
+ print(f" Sweep successful!")
             print(f"   TX: {sweep_txid}")
             print(f"   Explorer: {get_explorer_url(sweep_txid)}")
             
@@ -326,10 +338,10 @@ def _handle_funded_test(test_data: dict, state: StateManager, current_height: in
             test_data['sweep_txid'] = sweep_txid
             state.save()
         else:
-            print(f"⚠️  Sweep returned None")
+ print(f" Sweep returned None")
             
     except Exception as e:
-        print(f"❌ Sweep failed: {e}")
+ print(f" Sweep failed: {e}")
         import traceback
         traceback.print_exc()
 
@@ -341,7 +353,7 @@ def _handle_funded_test(test_data: dict, state: StateManager, current_height: in
 def print_test_matrix():
     """Print the test matrix generated from ContractDefinition."""
     print("\n" + "="*80)
-    print("📋 TEST MATRIX (Generated from ContractDefinition)")
+ print(" TEST MATRIX (Generated from ContractDefinition)")
     print("="*80)
     
     for contract_name, contract in CONTRACTS.items():
@@ -349,7 +361,7 @@ def print_test_matrix():
         print(f"   BIP Reference: {contract.bip_reference}")
         print(f"   Paths:")
         for path in contract.paths:
-            locktime_note = "⏰" if path.requires_locktime else "✅"
+ locktime_note = "" if path.requires_locktime else ""
             print(f"      {locktime_note} {path.name}: {path.display_name}")
         print(f"   Tests: {len(contract.paths)} paths × 2 output_types = {len(contract.paths) * 2}")
     

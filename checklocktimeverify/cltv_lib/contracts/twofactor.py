@@ -27,7 +27,7 @@ TWOFACTOR = ContractDefinition(
     bip_reference="BIP-65 Example #3: Two-Factor Wallet",
     short_description="2FA spending with emergency recovery after timeout",
     use_cases=["Secure wallet", "Business continuity", "Lost device recovery"],
-    icon="🔐",
+ icon="",
     
     paths=[
         SpendingPath(
@@ -52,8 +52,8 @@ TWOFACTOR = ContractDefinition(
     ],
     
     key_roles=[
-        KeyRole("user", "User", "Your personal key", "👤"),
-        KeyRole("service", "Service", "2FA provider's key", "🏢"),
+ KeyRole("user", "User", "Your personal key", ""),
+ KeyRole("service", "Service", "2FA provider's key", ""),
     ],
 )
 

@@ -48,7 +48,7 @@ DECAYING_MULTISIG = ContractDefinition(
         "HODL wallet with backup recovery",
         "Inheritance planning with time-based access"
     ],
-    icon="🔓",
+ icon="",
     
     paths=[
         SpendingPath(
@@ -81,11 +81,11 @@ DECAYING_MULTISIG = ContractDefinition(
     ],
     
     key_roles=[
-        KeyRole("key1", "Key 1", "First backup key", "🔑"),
-        KeyRole("key2", "Key 2", "Second backup key", "🔑"),
-        KeyRole("key3", "Key 3", "Third backup key", "🔑"),
-        KeyRole("key4", "Key 4", "Fourth backup key", "🔑"),
-        KeyRole("key5", "Key 5", "Fifth backup key", "🔑"),
+ KeyRole("key1", "Key 1", "First backup key", ""),
+ KeyRole("key2", "Key 2", "Second backup key", ""),
+ KeyRole("key3", "Key 3", "Third backup key", ""),
+ KeyRole("key4", "Key 4", "Fourth backup key", ""),
+ KeyRole("key5", "Key 5", "Fifth backup key", ""),
     ],
 )
 

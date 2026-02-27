@@ -121,7 +121,7 @@ class CLTVList(MyTreeView):
                 # Refresh list if address was created
                 self.update_rows.emit(self.wallet)
         
-        create_btn = EnterButton(_("➕ Create Contract"), create_contract)
+ create_btn = EnterButton(_(" Create Contract"), create_contract)
         create_btn.setToolTip(_("Create a new time-locked contract"))
         
         return [create_btn]
@@ -164,10 +164,10 @@ class CLTVList(MyTreeView):
         if 'locktime' in params and params.get('locktime') is not None and current_height:
             locktime_value = params.get('locktime')
             if current_height >= locktime_value:
-                lock_status = _('🔓 Unlocked')
+ lock_status = _(' Unlocked')
             else:
                 blocks_remaining = locktime_value - current_height
-                lock_status = _('🔒 Locked') + f' ({blocks_remaining})'
+ lock_status = _(' Locked') + f' ({blocks_remaining})'
         else:
             lock_status = _('Unknown')
         
@@ -348,15 +348,15 @@ class CLTVList(MyTreeView):
         if balance > 0:
             balance_str = self.main_window.format_amount(balance)
             base_unit = self.main_window.base_unit()
-            status_action = menu.addAction(f"💰 {balance_str} {base_unit}")
+ status_action = menu.addAction(f" {balance_str} {base_unit}")
             status_action.setEnabled(False)
         
         if locktime:
             if is_unlocked:
-                lock_action = menu.addAction(_("🔓 Unlocked"))
+ lock_action = menu.addAction(_(" Unlocked"))
             else:
                 blocks_remaining = locktime - current_height
-                lock_action = menu.addAction(_("🔒 Locked ({} blocks)").format(blocks_remaining))
+ lock_action = menu.addAction(_(" Locked ({} blocks)").format(blocks_remaining))
             lock_action.setEnabled(False)
         
         # Delete action
@@ -592,7 +592,7 @@ class CLTVList(MyTreeView):
         try:
             from ..cltv_lib.version_info import get_version_string
             version_str = get_version_string()
-            version_action = menu.addAction(f"ℹ️ {version_str}")
+ version_action = menu.addAction(f" {version_str}")
             version_action.setEnabled(False)  # Just display, not clickable
         except Exception:
             pass

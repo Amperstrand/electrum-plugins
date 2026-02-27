@@ -28,7 +28,7 @@ ESCROW = ContractDefinition(
     bip_reference="BIP-65 Example #1: Escrow with Timeout",
     short_description="3-party escrow with arbitration after timeout",
     use_cases=["Marketplace escrow", "Dispute resolution", "Trust-minimized trades"],
-    icon="🤝",
+ icon="",
     
     paths=[
         SpendingPath(
@@ -63,9 +63,9 @@ ESCROW = ContractDefinition(
     ],
     
     key_roles=[
-        KeyRole("alice", "Alice", "First party (e.g., buyer)", "👤"),
-        KeyRole("bob", "Bob", "Second party (e.g., seller)", "👥"),
-        KeyRole("lenny", "Lenny", "Neutral arbiter", "⚖️"),
+ KeyRole("alice", "Alice", "First party (e.g., buyer)", ""),
+ KeyRole("bob", "Bob", "Second party (e.g., seller)", ""),
+ KeyRole("lenny", "Lenny", "Neutral arbiter", ""),
     ],
 )
 

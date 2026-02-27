@@ -65,9 +65,30 @@ TEST_KEYS = {
         'description': 'Data publisher (reveals preimage)'
     },
     'buyer': {
-        'privkey_hex': '0000000000000000000000000000000000000000000000000000000000000061',
+        'privkey_hex': '0000000000000000000000000000000000000000000000000000000061',
         'description': 'Data buyer (can refund after timeout)'
+    },
+    'member1': {
+        'privkey_hex': '0000000000000000000000000000000000000000000000080',
+        'description': 'Decaying multisig member 1'
+    },
+    'member2': {
+        'privkey_hex': '0000000000000000000000000000000000000000000081',
+        'description': 'Decaying multisig member 2'
+    },
+    'member3': {
+        'privkey_hex': '0000000000000000000000000000000000000000000082',
+        'description': 'Decaying multisig member 3'
+    },
+    'member4': {
+        'privkey_hex': '0000000000000000000000000000000000000000083',
+        'description': 'Decaying multisig member 4'
+    },
+    'member5': {
+        'privkey_hex': '0000000000000000000000000000000000000000084',
+        'description': 'Decaying multisig member 5'
     }
+}
 }
 
 
@@ -165,7 +186,12 @@ _CACHED_PUBKEYS = {
     'sender': get_test_pubkey('sender'),
     'receiver': get_test_pubkey('receiver'),
     'publisher': get_test_pubkey('publisher'),
-    'buyer': get_test_pubkey('buyer')
+    'buyer': get_test_pubkey('buyer'),
+    'member1': get_test_pubkey('member1'),
+    'member2': get_test_pubkey('member2'),
+    'member3': get_test_pubkey('member3'),
+    'member4': get_test_pubkey('member4'),
+    'member5': get_test_pubkey('member5'),
 }
 
 
@@ -231,13 +257,13 @@ if __name__ == '__main__':
     # Verify pubkeys match expected values
     print("\nVerifying pubkey derivation...")
     alice = get_test_keypair('alice')
-    print(f"✓ Alice pubkey: {alice['pubkey'][:32]}...")
-    print(f"✓ All test keys loaded successfully")
+ print(f" Alice pubkey: {alice['pubkey'][:32]}...")
+ print(f" All test keys loaded successfully")
     
     # Test contract key lookup
     print("\nTesting contract key lookup...")
     try:
         escrow_keys = get_test_keys_for_contract('escrow')
-        print(f"✓ Escrow keys: {list(escrow_keys.keys())}")
+ print(f" Escrow keys: {list(escrow_keys.keys())}")
     except Exception as e:
         print(f"  (Contract lookup not available: {e})")

@@ -315,7 +315,7 @@ class UTXOReservationManager:
         """Clear all test states (for fresh start)"""
         self.state = self._empty_state()
         self.save()
-        print("✅ Cleared all UTXO reservation states")
+ print(" Cleared all UTXO reservation states")
 
 
 # ============================================================================
@@ -339,7 +339,7 @@ def clear_all_utxo_states():
 
 def test_utxo_reservation_system():
     """Test the UTXO reservation system"""
-    print("🧪 Testing UTXO Reservation System...")
+ print(" Testing UTXO Reservation System...")
     
     manager = UTXOReservationManager()
     
@@ -374,15 +374,15 @@ def test_utxo_reservation_system():
     funded_variants = manager.get_funded_variants('cltv_escrow')
     assert 'p2wsh_normal_operations' in funded_variants
     
-    print("  ✅ All tests passed!")
+ print(" All tests passed!")
     
     # Save and reload
     manager.save()
     manager2 = UTXOReservationManager()
     assert manager2.get_example_data('cltv_escrow')['script_hex'] == 'test_script'
     
-    print("  ✅ Persistence test passed!")
-    print("🎉 UTXO Reservation System working correctly!")
+ print(" Persistence test passed!")
+ print(" UTXO Reservation System working correctly!")
 
 
 if __name__ == "__main__":

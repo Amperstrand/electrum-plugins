@@ -23,7 +23,7 @@ HODL = ContractDefinition(
     bip_reference="BIP-65 Basic Example",
     short_description="Lock funds until a specific block height",
     use_cases=["Long-term savings", "HODL commitment", "Time-delayed inheritance"],
-    icon="⏰",
+ icon="",
     
     paths=[
         SpendingPath(
@@ -38,7 +38,7 @@ HODL = ContractDefinition(
     ],
     
     key_roles=[
-        KeyRole("pubkey", "Owner", "The key that can spend after locktime", "👤"),
+ KeyRole("pubkey", "Owner", "The key that can spend after locktime", ""),
     ],
 )
 

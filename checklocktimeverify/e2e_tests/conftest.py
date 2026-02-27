@@ -16,6 +16,10 @@ ELECTRUM_DIR = os.path.expanduser("~/src/electrum")
 if os.path.exists(ELECTRUM_DIR):
     sys.path.insert(0, ELECTRUM_DIR)
 
+# Add e2e_tests to path for network_config import
+E2E_TESTS_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, E2E_TESTS_DIR)
+
 # ============================================================================
 # CRITICAL: Configure network BEFORE any address generation
 # ============================================================================
@@ -24,7 +28,7 @@ if os.path.exists(ELECTRUM_DIR):
 from network_config import configure_electrum, NETWORK_NAME, WALLET_SUBDIR, NETWORK_FLAG, EXPLORER_BASE
 configure_electrum()
 
-print(f"✅ Network set to {NETWORK_NAME}")
+print(f" Network set to {NETWORK_NAME}")
 
 
 def pytest_addoption(parser):
@@ -112,15 +116,15 @@ def locktime_value(pytestconfig):
                 info = json.loads(result.stdout)
                 current_height = info.get('blockchain_height', 100000)
                 locktime = current_height + 1
-                print(f"\n🔒 Locktime not specified, using: current_height + 1 = {locktime}")
+ print(f"\n Locktime not specified, using: current_height + 1 = {locktime}")
             else:
                 locktime = 100001  # Default fallback
-                print(f"\n🔒 Locktime not specified, using default: {locktime}")
+ print(f"\n Locktime not specified, using default: {locktime}")
         except Exception as e:
             locktime = 100001  # Default fallback
-            print(f"\n🔒 Locktime not specified, using default: {locktime} (error: {e})")
+ print(f"\n Locktime not specified, using default: {locktime} (error: {e})")
     else:
-        print(f"\n🔒 Locktime set via --locktime: {locktime}")
+ print(f"\n Locktime set via --locktime: {locktime}")
     
     print(f"   → All tests use locktime: {locktime}")
     print(f"   → State file: test_state_{locktime}.json")
@@ -159,7 +163,7 @@ def auto_fund_addresses(pytestconfig):
     # Get locktime from CLI option
     locktime = pytestconfig.getoption("--locktime")
     if locktime is None:
-        print("\n⚠️  Cannot auto-fund: --locktime not specified")
+ print("\n Cannot auto-fund: --locktime not specified")
         return
     
     state = StateManager(locktime=locktime)
@@ -197,7 +201,7 @@ def auto_fund_addresses(pytestconfig):
                     })
     
     if not unfunded_addresses:
-        print("\n✅ All addresses already funded or no addresses created yet")
+ print("\n All addresses already funded or no addresses created yet")
         return
     
     # Sort by test number for consistent ordering
@@ -205,7 +209,7 @@ def auto_fund_addresses(pytestconfig):
     
     # Display what we're funding
     print(f"\n{'='*80}")
-    print(f"💰 BATCH FUNDING: {len(unfunded_addresses)} tests need funding")
+ print(f" BATCH FUNDING: {len(unfunded_addresses)} tests need funding")
     print(f"{'='*80}\n")
     
     for i, addr_info in enumerate(unfunded_addresses, 1):
@@ -216,7 +220,7 @@ def auto_fund_addresses(pytestconfig):
     total_sats = sum(addr['amount_sats'] for addr in unfunded_addresses)
     
     print(f"\n{'='*80}")
-    print(f"📋 FUNDING SUMMARY")
+ print(f" FUNDING SUMMARY")
     print(f"{'='*80}")
     print(f"   Tests to fund: {len(unfunded_addresses)}")
     print(f"   Total amount: {total_sats:,} satoshis ({total_sats / 100_000_000:.8f} BTC)")
@@ -242,7 +246,7 @@ def auto_fund_addresses(pytestconfig):
             raise RuntimeError(f"Daemon not running. Start with: electrum {NETWORK_FLAG} daemon -d")
         
         daemon_info = json.loads(result.stdout)
-        print(f"   ✅ Daemon confirmed on {daemon_info.get('network', 'unknown')}")
+ print(f" Daemon confirmed on {daemon_info.get('network', 'unknown')}")
         
         # Build outputs: each test gets unique address + unique amount
         outputs_list = []
@@ -264,14 +268,14 @@ def auto_fund_addresses(pytestconfig):
         )
         
         if result.returncode != 0:
-            print(f"   ❌ Transaction creation failed: {result.stderr}")
+ print(f" Transaction creation failed: {result.stderr}")
             return
         
         tx_hex = result.stdout.strip()
-        print(f"   ✅ Transaction created ({len(tx_hex)//2} bytes)")
+ print(f" Transaction created ({len(tx_hex)//2} bytes)")
         
         # Broadcast
-        print(f"   📡 Broadcasting transaction...")
+ print(f" Broadcasting transaction...")
         
         result = subprocess.run(
             [str(electrum_python), str(electrum_path), NETWORK_FLAG, "broadcast", tx_hex],
@@ -281,7 +285,7 @@ def auto_fund_addresses(pytestconfig):
         )
         
         if result.returncode != 0:
-            print(f"   ❌ Broadcast failed: {result.stderr}")
+ print(f" Broadcast failed: {result.stderr}")
             return
         
         # Parse TXID
@@ -291,7 +295,7 @@ def auto_fund_addresses(pytestconfig):
             if isinstance(broadcast_result, list) and len(broadcast_result) == 2:
                 success, txid = broadcast_result
                 if not success:
-                    print(f"   ❌ Broadcast returned false: {txid}")
+ print(f" Broadcast returned false: {txid}")
                     return
             elif isinstance(broadcast_result, str):
                 txid = broadcast_result
@@ -301,10 +305,10 @@ def auto_fund_addresses(pytestconfig):
             txid = broadcast_output.strip('"')
         
         if not txid or len(txid) != 64:
-            print(f"   ❌ Invalid TXID: {txid}")
+ print(f" Invalid TXID: {txid}")
             return
         
-        print(f"\n✅ Transaction broadcast successful!")
+ print(f"\n Transaction broadcast successful!")
         print(f"   TXID: {txid}")
         print(f"   Verify: {EXPLORER_BASE}/tx/{txid}")
         
@@ -359,7 +363,7 @@ def auto_fund_addresses(pytestconfig):
                             verification_failed.append((vout_idx, output_addr, output_amount))
         
         if verification_failed:
-            print(f"   ⚠️  WARNING: {len(verification_failed)} outputs don't match expected order")
+ print(f" WARNING: {len(verification_failed)} outputs don't match expected order")
         
         # Update state with funding info using UTXO offset (vout index)
         updated_count = 0
@@ -374,7 +378,7 @@ def auto_fund_addresses(pytestconfig):
             actual_vout = addr_amount_to_vout.get((addr, expected_amount))
             
             if actual_vout is None:
-                print(f"   ⚠️  Test #{tnum}: Could not find vout for {addr[:20]}... ({expected_amount} sats)")
+ print(f" Test #{tnum}: Could not find vout for {addr[:20]}... ({expected_amount} sats)")
                 continue
             
             # Find and update the test in state
@@ -383,26 +387,26 @@ def auto_fund_addresses(pytestconfig):
                 if test.get('test_number') == tnum:
                     # Verify address matches (safety check)
                     if test.get('address') != addr:
-                        print(f"   ⚠️  Test #{tnum}: Address mismatch! Expected {addr}, got {test.get('address')}")
+ print(f" Test #{tnum}: Address mismatch! Expected {addr}, got {test.get('address')}")
                     
                     test['funding_txid'] = txid
                     test['funding_vout'] = actual_vout
                     test['status'] = 'FUNDED'
                     test['funded_at'] = datetime.now().isoformat()
                     updated_count += 1
-                    print(f"   ✅ Test #{tnum}: vout={actual_vout} (UTXO offset), {expected_amount} sats, {addr[:20]}...")
+ print(f" Test #{tnum}: vout={actual_vout} (UTXO offset), {expected_amount} sats, {addr[:20]}...")
                     break
         
         state.save()
         
-        print(f"\n🎉 {updated_count}/{len(unfunded_addresses)} tests funded!")
+ print(f"\n {updated_count}/{len(unfunded_addresses)} tests funded!")
         print(f"   Network: {NETWORK_NAME}")
         print(f"   Run tests again to sweep after locktime passes")
         
         return
     
     except Exception as e:
-        print(f"❌ Batch funding failed: {e}")
+ print(f" Batch funding failed: {e}")
         import traceback
         traceback.print_exc()
         return
@@ -441,7 +445,7 @@ def electrum_daemon_running():
                 f"  ./run_electrum --testnet4 daemon start"
             )
         
-        print(f"\n✓ Electrum daemon is running")
+ print(f"\n Electrum daemon is running")
         return True
         
     except subprocess.TimeoutExpired:
@@ -488,11 +492,11 @@ def test_environment(electrum_daemon_running, logs_directory):
         script = test_dir / script_name
         if not script.exists():
             # Skip missing optional helper scripts
-            print(f"ℹ️  Optional helper script missing: {script_name} (skipping check)")
+ print(f" Optional helper script missing: {script_name} (skipping check)")
             continue
         if not script.stat().st_mode & 0o111:
             # Skip non-executable scripts instead of failing
-            print(f"ℹ️  Optional helper script not executable: {script_name} (skipping check)")
+ print(f" Optional helper script not executable: {script_name} (skipping check)")
             continue
     
     return {
@@ -725,10 +729,10 @@ def current_height():
             import json
             info = json.loads(result.stdout)
             height = info.get('blockchain_height', 100000)
-            print(f"✅ Using current blockchain height: {height}")
+ print(f" Using current blockchain height: {height}")
             return height
     except Exception as e:
-        print(f"⚠️  Could not get blockchain height: {e}, using default 100000")
+ print(f" Could not get blockchain height: {e}, using default 100000")
     
     return 100000
 
@@ -866,6 +870,37 @@ def data_publishing_keypairs(generate_keypair):
 
 
 @pytest.fixture
+def multisig_keypairs(generate_keypair):
+    """
+    Generate 5 keypairs for Decaying Multisig contracts.
+    
+    Decaying multisig contracts have different spending rules based on time:
+    - Normal: 3-of-5 members
+    - After 60 months: 2-of-5 members  
+    - After 66 months: 1-of-5 members
+    
+    Returns:
+        function: Function that takes format ('p2wsh', 'taproot')
+                  and returns 5-tuple of keypairs for members
+    
+    Example:
+        >>> def test_multisig(multisig_keypairs):
+        ...     m1, m2, m3, m4, m5 = multisig_keypairs('p2wsh')
+        ...     # All 5 members can now sign
+    """
+    def _get_quintet(format_name='p2wsh'):
+        # Same keys for all formats - uses central test_keys.py
+        member1 = generate_keypair('member1')
+        member2 = generate_keypair('member2')
+        member3 = generate_keypair('member3')
+        member4 = generate_keypair('member4')
+        member5 = generate_keypair('member5')
+        return member1, member2, member3, member4, member5
+    
+    return _get_quintet
+
+
+@pytest.fixture
 def test_data_preimage():
     """
     Generate test data and its HASH160 hash for data publishing tests.
@@ -968,16 +1003,16 @@ def track_test_performance(request):
     
     # Categorize test speed
     if duration < 5:
-        speed_emoji = "⚡"
+ speed_emoji = ""
         speed_label = "fast"
     elif duration < 15:
-        speed_emoji = "🏃"
+ speed_emoji = ""
         speed_label = "normal"
     elif duration < 30:
-        speed_emoji = "🐢"
+ speed_emoji = ""
         speed_label = "slow"
     else:
-        speed_emoji = "🐌"
+ speed_emoji = ""
         speed_label = "very slow"
     
     # Log timing (only for verbose mode)

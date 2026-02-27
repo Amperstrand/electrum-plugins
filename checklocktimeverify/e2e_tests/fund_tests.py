@@ -57,7 +57,7 @@ def get_unfunded_tests(state: StateManager) -> List[Tuple[str, str, Dict]]:
 def print_funding_summary(unfunded: List[Tuple[str, str, Dict]]):
     """Print summary of tests to fund."""
     print("\n" + "="*80)
-    print("📋 TESTS TO FUND")
+ print(" TESTS TO FUND")
     print("="*80)
     
     total_sats = 0
@@ -85,7 +85,7 @@ def print_funding_summary(unfunded: List[Tuple[str, str, Dict]]):
     
     print("\n" + "-"*80)
     for address, outputs in outputs_by_address.items():
-        print(f"\n📍 {address}")
+ print(f"\n {address}")
         for out in outputs:
             print(f"   └─ {out['amount']} sats ({out['category']} {out['variant']} - {out['path']})")
     
@@ -118,7 +118,7 @@ def create_funding_transaction(outputs_by_address: Dict, dry_run: bool = False) 
     
     if dry_run:
         print("\n" + "="*80)
-        print("🔍 DRY RUN - Would create transaction with:")
+ print(" DRY RUN - Would create transaction with:")
         print("="*80)
         for addr, amount in all_outputs:
             print(f"   {addr}: {amount} sats")
@@ -130,7 +130,7 @@ def create_funding_transaction(outputs_by_address: Dict, dry_run: bool = False) 
     # Format: [["address1", amount1], ["address2", amount2], ...]
     outputs_json = json.dumps([[addr, amount / 100_000_000] for addr, amount in all_outputs])
     
-    print(f"\n🔧 Creating transaction...")
+ print(f"\n Creating transaction...")
     print(f"   Outputs: {len(all_outputs)}")
     
     # Create unsigned transaction
@@ -143,7 +143,7 @@ def create_funding_transaction(outputs_by_address: Dict, dry_run: bool = False) 
     )
     
     if result.returncode != 0:
-        print(f"❌ Failed to create transaction: {result.stderr}")
+ print(f" Failed to create transaction: {result.stderr}")
         print(f"   stdout: {result.stdout[:200]}")
         return None
     
@@ -159,10 +159,10 @@ def create_funding_transaction(outputs_by_address: Dict, dry_run: bool = False) 
         # Not JSON, assume it's raw hex
         tx_hex = tx_hex.strip('"').strip("'")
     
-    print(f"   ✅ Transaction created")
+ print(f" Transaction created")
     
     # Sign and broadcast
-    print(f"   🔏 Signing...")
+ print(f" Signing...")
     result = subprocess.run(
         [str(electrum_python), str(electrum_path), NETWORK_FLAG,
          "signtransaction", tx_hex],
@@ -172,7 +172,7 @@ def create_funding_transaction(outputs_by_address: Dict, dry_run: bool = False) 
     )
     
     if result.returncode != 0:
-        print(f"❌ Failed to sign: {result.stderr}")
+ print(f" Failed to sign: {result.stderr}")
         print(f"   stdout: {result.stdout[:200]}")
         return None
     
@@ -185,7 +185,7 @@ def create_funding_transaction(outputs_by_address: Dict, dry_run: bool = False) 
         # Not JSON, assume it's raw hex
         signed_hex = signed_hex.strip('"').strip("'")
     
-    print(f"   📡 Broadcasting...")
+ print(f" Broadcasting...")
     result = subprocess.run(
         [str(electrum_python), str(electrum_path), NETWORK_FLAG,
          "broadcast", signed_hex],
@@ -195,11 +195,11 @@ def create_funding_transaction(outputs_by_address: Dict, dry_run: bool = False) 
     )
     
     if result.returncode != 0:
-        print(f"❌ Failed to broadcast: {result.stderr}")
+ print(f" Failed to broadcast: {result.stderr}")
         return None
     
     txid = result.stdout.strip().strip('"')
-    print(f"   ✅ Broadcast successful!")
+ print(f" Broadcast successful!")
     print(f"   TXID: {txid}")
     
     return txid
@@ -216,7 +216,7 @@ def update_state_with_funding(
     
     This maps each test to its specific UTXO based on amount.
     """
-    print(f"\n📝 Updating state file...")
+ print(f"\n Updating state file...")
     
     # Build a map of (address, amount) -> vout index
     # We need to know the output order in the transaction
@@ -237,10 +237,10 @@ def update_state_with_funding(
             test['funding_txid'] = txid
             test['funding_vout'] = test_vout
             test['status'] = 'FUNDED'
-            print(f"   ✅ {category} {variant} ({test.get('path')}): vout={test_vout}")
+ print(f" {category} {variant} ({test.get('path')}): vout={test_vout}")
     
     state.save()
-    print(f"\n✅ State file updated!")
+ print(f"\n State file updated!")
 
 
 def main():
@@ -255,7 +255,7 @@ def main():
     unfunded = get_unfunded_tests(state)
     
     if not unfunded:
-        print("✅ All tests already funded!")
+ print(" All tests already funded!")
         return
     
     outputs_by_address, total_sats = print_funding_summary(unfunded)
@@ -266,7 +266,7 @@ def main():
     
     # Confirm
     if not args.yes:
-        print(f"\n⚠️  About to fund {len(unfunded)} tests with {total_sats} sats")
+ print(f"\n About to fund {len(unfunded)} tests with {total_sats} sats")
         response = input("Continue? [y/N] ")
         if response.lower() != 'y':
             print("Cancelled.")
@@ -276,7 +276,7 @@ def main():
     
     if txid:
         update_state_with_funding(state, unfunded, txid, outputs_by_address)
-        print(f"\n🎉 All tests funded!")
+ print(f"\n All tests funded!")
         print(f"   TX: {txid}")
         print(f"   Wait for confirmation, then run tests to sweep.")
 

@@ -59,7 +59,7 @@ class StateManager:
             # Check version compatibility - if old version or no version, clear state
             stored_version = data.get('version', 0)
             if stored_version < self.CURRENT_VERSION:
-                print(f"⚠️  State file version {stored_version} is outdated (current: {self.CURRENT_VERSION}). Clearing old state to purge addresses.")
+ print(f" State file version {stored_version} is outdated (current: {self.CURRENT_VERSION}). Clearing old state to purge addresses.")
                 return {}
 
             return data
