@@ -1,0 +1,47 @@
+=== Task 5 Verification: fee_calculator.py ===
+
+1. print() count: 0
+
+2. logger. count: 21
+
+3. getLogger:
+26:logger = logging.getLogger(__name__)
+
+4. All logger calls:
+26:logger = logging.getLogger(__name__)
+82:            logger.debug("[FeeAccuracy] %s - Estimated: %s, Actual: %s, Accuracy: %.2%%", key, estimated_vsize, actual_vsize, accuracy_ratio)
+163:                logger.warning("[FeeCalculator] ContractHelper calculation failed: %s", e)
+183:            logger.debug("[FeeCalculator] No network available, using configured rate: %s sat/vbyte", self.fee_rate)
+192:                    logger.info("[FeeCalculator] ETA fee rate for %s blocks: %s sat/vbyte", target_blocks, network_rate)
+200:                    logger.info("[FeeCalculator] Histogram fee rate for %s blocks: %s sat/vbyte", target_blocks, rate)
+203:            logger.warning("[FeeCalculator] No network fee data available, using configured rate: %s sat/vbyte", self.fee_rate)
+206:            logger.error("[FeeCalculator] Network fee estimation failed: %s, using configured rate: %s sat/vbyte", e, self.fee_rate)
+401:        logger.debug("[FeeCalculator] calculate_for_utxos: %s inputs, balance=%s sats, dest=%s", len(utxos), balance, dest_address)
+409:            logger.warning("[FeeCalculator] Aborting: zero balance from %s UTXOs", len(utxos))
+417:        logger.debug("[FeeCalculator] script_type=%s, path=%s, "
+448:        logger.debug("[FeeCalculator] Built %s dummy inputs (script_type=%s)", len(tx_inputs), 'p2tr' if is_taproot else 'p2wsh')
+461:        logger.debug("[FeeCalculator] Dynamic buffer selected: %.1f%% (has path+params: %s)", (0.20 if not (self.script_type and self.path_name) else self.accuracy_tracker.get_dynamic_buffer(self.script_type, self.path_name)) * 100, bool(self.script_type and self.path_name))
+464:        logger.debug("[FeeCalculator] estimated_vsize=%s (with witness_sizehint=%s)", estimated_vsize, witness_sizehint)
+479:        logger.debug("[FeeCalculator] effective_vsize=%.1f (raw=%s, discount=%.4f for %s inputs)", effective_vsize, estimated_vsize, input_discount, num_inputs)
+489:            logger.debug("[FeeCalculator] Dynamic buffer: %.1f%%, Input discount: %.2fx, Buffered vsize: %s", dynamic_buffer * 100, input_discount, buffered_vsize)
+498:            logger.debug("[FeeCalculator] Fallback buffer: %.1f%%, Input discount: %.2fx, Buffered vsize: %s", buffer_multiplier * 100, input_discount, buffered_vsize)
+500:        logger.info("[FeeCalculator] Effective fee rate: %s sat/vbyte, %s inputs", effective_fee_rate, num_inputs)
+504:        logger.info("[FeeCalculator] RBF-adjusted fee: %s sats", total_fees)
+510:        logger.warning("[FeeCalculator] Insufficient funds: need %s sats, have %s sats", total_fees, balance)
+521:        logger.info("[FeeCalculator] Fee calculation success: vsize=%s, fees=%s sats, output=%s sats, rate=%.2f sat/vbyte", estimated_vsize, total_fees, output_amount, actual_fee_rate)
+
+5. Discount formula lines:
+245:    def _calculate_multi_input_discount(self, num_inputs: int) -> float:
+253:            num_inputs: Number of inputs in transaction
+258:        if num_inputs <= 1:
+262:        # Fix: divide total weight by num_inputs to get per-input discount (more inputs = lower per-input cost)
+263:        return (1.0 + (num_inputs - 1) * 0.75) / num_inputs
+280:    def predict_transaction_sizes(self, num_inputs: int, num_outputs: int, script_types: List[str]) -> Dict[str, int]:
+287:            num_inputs: Number of inputs
+299:            base_overhead = 8 + self._varint_size(num_inputs) + self._varint_size(num_outputs)
+302:            input_size = num_inputs * 150  # Rough estimate per input
+476:        num_inputs = len(utxos)
+477:        input_discount = self._calculate_multi_input_discount(num_inputs)
+479:        logger.debug("[FeeCalculator] effective_vsize=%.1f (raw=%s, discount=%.4f for %s inputs)", effective_vsize, estimated_vsize, input_discount, num_inputs)
+500:        logger.info("[FeeCalculator] Effective fee rate: %s sat/vbyte, %s inputs", effective_fee_rate, num_inputs)
+

@@ -13,12 +13,17 @@ Improvements:
 - Leverages Electrum's built-in estimation for P2WSH and Taproot
 """
 
+import logging
+
 from electrum.transaction import PartialTransaction, PartialTxInput, PartialTxOutput, TxOutpoint
 from electrum.bitcoin import construct_witness
 from typing import List, Dict, Any, Optional
 import time
 
 from .contract_helper import ContractHelper
+
+
+logger = logging.getLogger(__name__)
 
 
 def calculate_witness_size(
@@ -74,7 +79,7 @@ class FeeAccuracyTracker:
             if len(self.accuracy_history[key]) > 50:
                 self.accuracy_history[key] = self.accuracy_history[key][-50:]
 
-            print(f"[FeeAccuracy] {key} - Estimated: {estimated_vsize}, Actual: {actual_vsize}, Accuracy: {accuracy_ratio:.2%}")
+            logger.debug("[FeeAccuracy] %s - Estimated: %s, Actual: %s, Accuracy: %.2%%", key, estimated_vsize, actual_vsize, accuracy_ratio)
 
     def get_dynamic_buffer(self, script_type: str, path: str, confidence: float = 0.95) -> float:
         """
@@ -155,7 +160,7 @@ class FeeCalculator:
                     first_path = helper.get_all_paths()[0]
                     return helper.calculate_witness_size(first_path.name, {})
             except Exception as e:
-                print(f"[FeeCalculator] ContractHelper calculation failed: {e}")
+                logger.warning("[FeeCalculator] ContractHelper calculation failed: %s", e)
         
         # Absolute fallback: conservative estimate
         return 250
@@ -175,7 +180,7 @@ class FeeCalculator:
             Fee rate in sat/vbyte, or fallback to configured rate
         """
         if not self.network:
-            print(f"[FeeCalculator] No network available, using configured rate: {self.fee_rate} sat/vbyte")
+            logger.debug("[FeeCalculator] No network available, using configured rate: %s sat/vbyte", self.fee_rate)
             return self.fee_rate
 
         try:
@@ -184,7 +189,7 @@ class FeeCalculator:
             if fee_rates and isinstance(fee_rates, dict) and target_blocks in fee_rates:
                 network_rate = fee_rates[target_blocks]
                 if network_rate > 0:
-                    print(f"[FeeCalculator] ETA fee rate for {target_blocks} blocks: {network_rate} sat/vbyte")
+                    logger.info("[FeeCalculator] ETA fee rate for %s blocks: %s sat/vbyte", target_blocks, network_rate)
                     return max(1, network_rate)
 
             # Try fee histogram as fallback (mempool-based)
@@ -192,13 +197,13 @@ class FeeCalculator:
             if histogram:
                 rate = self._calculate_fee_from_histogram(histogram, target_blocks)
                 if rate > 0:
-                    print(f"[FeeCalculator] Histogram fee rate for {target_blocks} blocks: {rate} sat/vbyte")
+                    logger.info("[FeeCalculator] Histogram fee rate for %s blocks: %s sat/vbyte", target_blocks, rate)
                     return max(1, rate)
 
-            print(f"[FeeCalculator] No network fee data available, using configured rate: {self.fee_rate} sat/vbyte")
+            logger.warning("[FeeCalculator] No network fee data available, using configured rate: %s sat/vbyte", self.fee_rate)
 
         except Exception as e:
-            print(f"[FeeCalculator] Network fee estimation failed: {e}, using configured rate: {self.fee_rate} sat/vbyte")
+            logger.error("[FeeCalculator] Network fee estimation failed: %s, using configured rate: %s sat/vbyte", e, self.fee_rate)
 
         # Fallback to configured rate
         return self.fee_rate
@@ -254,8 +259,8 @@ class FeeCalculator:
             return 1.0
 
         # Simplified model: first input pays full overhead, additional inputs pay ~75%
-        # This is a rough approximation - actual discount depends on input types
-        return 1.0 + (num_inputs - 1) * 0.75
+        # Fix: divide total weight by num_inputs to get per-input discount (more inputs = lower per-input cost)
+        return (1.0 + (num_inputs - 1) * 0.75) / num_inputs
 
     def calculate_with_rbf_buffer(self, base_fee: int, rbf_probability: float = 0.1) -> int:
         """
@@ -393,6 +398,7 @@ class FeeCalculator:
         # Calculate total balance
         balance = sum(utxo['value'] for utxo in utxos)
         
+        logger.debug("[FeeCalculator] calculate_for_utxos: %s inputs, balance=%s sats, dest=%s", len(utxos), balance, dest_address)
         if balance == 0:
             return {
                 'success': False,
@@ -400,6 +406,7 @@ class FeeCalculator:
                 'balance': 0,
                 'total_fees': 0
             }
+            logger.warning("[FeeCalculator] Aborting: zero balance from %s UTXOs", len(utxos))
         
         # Get witness size hint (now calculated dynamically if path_name provided)
         witness_sizehint = self._get_witness_sizehint()
@@ -407,8 +414,8 @@ class FeeCalculator:
         
         # Debug logging
         calculation_method = "dynamic" if (self.path_name and self.params) else "estimated"
-        print(f"[FeeCalculator] script_type={self.script_type}, path={self.path_name}, "
-              f"is_taproot={is_taproot}, witness_sizehint={witness_sizehint} ({calculation_method})")
+        logger.debug("[FeeCalculator] script_type=%s, path=%s, "
+              "is_taproot=%s, witness_sizehint=%s (%s)", self.script_type, self.path_name, is_taproot, witness_sizehint, calculation_method)
         
         # Build dummy transaction inputs with proper hints
         tx_inputs = []
@@ -438,6 +445,7 @@ class FeeCalculator:
             txin.witness_sizehint = witness_sizehint
             
             tx_inputs.append(txin)
+        logger.debug("[FeeCalculator] Built %s dummy inputs (script_type=%s)", len(tx_inputs), 'p2tr' if is_taproot else 'p2wsh')
         
         # Build dummy output with max amount (we'll adjust after measuring)
         # Use full balance initially to get accurate size
@@ -450,9 +458,10 @@ class FeeCalculator:
         # Get ACCURATE size from Electrum
         # This accounts for witness placeholders and overhead
         estimated_vsize = temp_tx.estimated_size()
+        logger.debug("[FeeCalculator] Dynamic buffer selected: %.1f%% (has path+params: %s)", (0.20 if not (self.script_type and self.path_name) else self.accuracy_tracker.get_dynamic_buffer(self.script_type, self.path_name)) * 100, bool(self.script_type and self.path_name))
         
         # Debug logging
-        print(f"[FeeCalculator] estimated_vsize={estimated_vsize} (with witness_sizehint={witness_sizehint})")
+        logger.debug("[FeeCalculator] estimated_vsize=%s (with witness_sizehint=%s)", estimated_vsize, witness_sizehint)
         
         # Use network fee rate if available
         effective_fee_rate = self.get_network_fee_rate()
@@ -467,6 +476,7 @@ class FeeCalculator:
         num_inputs = len(utxos)
         input_discount = self._calculate_multi_input_discount(num_inputs)
         effective_vsize = estimated_vsize * input_discount
+        logger.debug("[FeeCalculator] effective_vsize=%.1f (raw=%s, discount=%.4f for %s inputs)", effective_vsize, estimated_vsize, input_discount, num_inputs)
 
         # Calculate fee with accuracy-based buffering and input discount
         if self.path_name and self.params:
@@ -476,7 +486,7 @@ class FeeCalculator:
                 int(buffered_vsize * effective_fee_rate),
                 buffered_vsize
             )
-            print(f"[FeeCalculator] Dynamic buffer: {dynamic_buffer:.1%}, Input discount: {input_discount:.2f}x, Buffered vsize: {buffered_vsize}")
+            logger.debug("[FeeCalculator] Dynamic buffer: %.1f%%, Input discount: %.2fx, Buffered vsize: %s", dynamic_buffer * 100, input_discount, buffered_vsize)
         else:
             # Estimated calculation: use larger buffer for safety
             buffer_multiplier = max(dynamic_buffer, 0.20)  # At least 20%
@@ -485,18 +495,19 @@ class FeeCalculator:
                 int(buffered_vsize * effective_fee_rate),
                 buffered_vsize
             )
-            print(f"[FeeCalculator] Fallback buffer: {buffer_multiplier:.1%}, Input discount: {input_discount:.2f}x, Buffered vsize: {buffered_vsize}")
+            logger.debug("[FeeCalculator] Fallback buffer: %.1f%%, Input discount: %.2fx, Buffered vsize: %s", buffer_multiplier * 100, input_discount, buffered_vsize)
 
-        print(f"[FeeCalculator] Effective fee rate: {effective_fee_rate} sat/vbyte, {num_inputs} inputs")
+        logger.info("[FeeCalculator] Effective fee rate: %s sat/vbyte, %s inputs", effective_fee_rate, num_inputs)
 
         # Add RBF buffer for potential fee bumping
         total_fees = self.calculate_with_rbf_buffer(total_fees)
-        print(f"[FeeCalculator] RBF-adjusted fee: {total_fees} sats")
+        logger.info("[FeeCalculator] RBF-adjusted fee: %s sats", total_fees)
         
         # Calculate output amount after fees
         output_amount = balance - total_fees
         
         if output_amount <= 0:
+        logger.warning("[FeeCalculator] Insufficient funds: need %s sats, have %s sats", total_fees, balance)
             return {
                 'success': False,
                 'error': f'Insufficient funds: need {total_fees} sats for fees, have {balance} sats',
@@ -507,6 +518,7 @@ class FeeCalculator:
         # Calculate actual fee rate achieved
         actual_fee_rate = total_fees / estimated_vsize
         
+        logger.info("[FeeCalculator] Fee calculation success: vsize=%s, fees=%s sats, output=%s sats, rate=%.2f sat/vbyte", estimated_vsize, total_fees, output_amount, actual_fee_rate)
         return {
             'success': True,
             'estimated_vsize': estimated_vsize,
