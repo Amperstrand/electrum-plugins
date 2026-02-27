@@ -1,0 +1,267 @@
+"""
+Centralized Test Keys for CLTV Plugin
+
+These are deterministic keys used across all dialogs, tests, and sweepers.
+DO NOT USE WITH REAL FUNDS - FOR TESTING/POC ONLY.
+
+All modules should import from here to maintain consistency.
+
+Single Source of Truth:
+- TEST_KEYS dict contains all test private keys
+- ParamSpec.test_key_name in ContractDefinition maps param names to test keys
+- get_test_keys_for_contract() uses ContractDefinition to get all keys for a contract
+"""
+
+from typing import Dict
+from electrum_ecc import ECPrivkey
+from electrum.util import BitcoinException
+
+
+# Hardcoded test keys (deterministic, for POC/testing only)
+# These match the keys used in e2e tests and dialogs
+TEST_KEYS = {
+    'alice': {
+        'privkey_hex': '0000000000000000000000000000000000000000000000000000000000000020',
+        'description': 'Alice (Party 1) - Business operator'
+    },
+    'bob': {
+        'privkey_hex': '0000000000000000000000000000000000000000000000000000000000000021',
+        'description': 'Bob (Party 2) - Business operator'
+    },
+    'lenny': {
+        'privkey_hex': '0000000000000000000000000000000000000000000000000000000000000022',
+        'description': 'Lenny (Arbitrator) - Escrow agent'
+    },
+    # Simple CLTV uses the classic generator point
+    'hodl': {
+        'privkey_hex': '0000000000000000000000000000000000000000000000000000000000000001',
+        'description': 'Simple CLTV holder'
+    },
+    # Two-Factor Wallet keys (matching E2E test keys: 0x40, 0x41, 0x42)
+    'user': {
+        'privkey_hex': '0000000000000000000000000000000000000000000000000000000000000040',
+        'description': 'Two-factor wallet user'
+    },
+    'service': {
+        'privkey_hex': '0000000000000000000000000000000000000000000000000000000000000041',
+        'description': 'Two-factor service (2FA)'
+    },
+    'recovery': {
+        'privkey_hex': '0000000000000000000000000000000000000000000000000000000000000042',
+        'description': 'Two-factor recovery key'
+    },
+    # Payment Channel keys (matching E2E test keys: 0x50, 0x51)
+    'sender': {
+        'privkey_hex': '0000000000000000000000000000000000000000000000000000000000000050',
+        'description': 'Payment channel sender'
+    },
+    'receiver': {
+        'privkey_hex': '0000000000000000000000000000000000000000000000000000000000000051',
+        'description': 'Payment channel receiver'
+    },
+    # Data Publishing keys (matching E2E test keys: 0x60, 0x61)
+    'publisher': {
+        'privkey_hex': '0000000000000000000000000000000000000000000000000000000000000060',
+        'description': 'Data publisher (reveals preimage)'
+    },
+    'buyer': {
+        'privkey_hex': '0000000000000000000000000000000000000000000000000000000000000061',
+        'description': 'Data buyer (can refund after timeout)'
+    },
+    'member1': {
+        'privkey_hex': '0000000000000000000000000000000000000000000000000000000000080',
+        'description': 'Decaying multisig member 1'
+    },
+    'member2': {
+        'privkey_hex': '0000000000000000000000000000000000000000000000000000000081',
+        'description': 'Decaying multisig member 2'
+    },
+    'member3': {
+        'privkey_hex': '0000000000000000000000000000000000000000000000000000082',
+        'description': 'Decaying multisig member 3'
+    },
+    'member4': {
+        'privkey_hex': '0000000000000000000000000000000000000000000000000000083',
+        'description': 'Decaying multisig member 4'
+    },
+    'member5': {
+        'privkey_hex': '0000000000000000000000000000000000000000000000084',
+        'description': 'Decaying multisig member 5'
+    }
+
+
+def get_test_privkey(key_name: str) -> ECPrivkey:
+    """
+    Get ECPrivkey object for a test key.
+    
+    Args:
+        key_name: One of 'alice', 'bob', 'lenny', 'hodl'
+        
+    Returns:
+        ECPrivkey object
+        
+    Example:
+        >>> alice_key = get_test_privkey('alice')
+        >>> alice_pub = alice_key.get_public_key_bytes(compressed=True)
+    """
+    if key_name not in TEST_KEYS:
+        raise BitcoinException(f"Unknown test key: {key_name}. Available: {list(TEST_KEYS.keys())}")
+    
+    privkey_hex = TEST_KEYS[key_name]['privkey_hex']
+    return ECPrivkey(bytes.fromhex(privkey_hex))
+
+
+def get_test_pubkey(key_name: str, compressed: bool = True) -> str:
+    """
+    Get public key hex string for a test key.
+    
+    Args:
+        key_name: One of 'alice', 'bob', 'lenny', 'hodl'
+        compressed: Return compressed pubkey (default: True)
+        
+    Returns:
+        Public key as hex string
+        
+    Example:
+        >>> alice_pub = get_test_pubkey('alice')
+        >>> print(alice_pub)  # 03d30199d74fb5a22d47b6e054e2f378cedacffcb89904a61d75d0dbd407143e65
+    """
+    privkey = get_test_privkey(key_name)
+    pubkey_bytes = privkey.get_public_key_bytes(compressed=compressed)
+    return pubkey_bytes.hex()
+
+
+def get_test_keypair(key_name: str):
+    """
+    Get both private and public keys for a test key.
+    
+    Args:
+        key_name: One of 'alice', 'bob', 'lenny', 'hodl'
+        
+    Returns:
+        Dictionary with 'privkey' (ECPrivkey) and 'pubkey' (hex string)
+        
+    Example:
+        >>> alice = get_test_keypair('alice')
+        >>> privkey = alice['privkey']
+        >>> pubkey = alice['pubkey']
+    """
+    privkey = get_test_privkey(key_name)
+    pubkey = get_test_pubkey(key_name)
+    return {
+        'privkey': privkey,
+        'privkey_hex': TEST_KEYS[key_name]['privkey_hex'],
+        'pubkey': pubkey,
+        'pubkey_compressed': pubkey,
+        'description': TEST_KEYS[key_name]['description']
+    }
+
+
+def get_all_test_keys():
+    """
+    Get all test keys at once.
+    
+    Returns:
+        Dictionary mapping key names to keypair dicts
+        
+    Example:
+        >>> keys = get_all_test_keys()
+        >>> alice_pub = keys['alice']['pubkey']
+    """
+    return {name: get_test_keypair(name) for name in TEST_KEYS.keys()}
+
+
+# Pre-computed pubkeys for quick access (cached)
+# These are computed once on import for performance
+_CACHED_PUBKEYS = {
+    'alice': get_test_pubkey('alice'),
+    'bob': get_test_pubkey('bob'),
+    'lenny': get_test_pubkey('lenny'),
+    'hodl': get_test_pubkey('hodl'),
+    'user': get_test_pubkey('user'),
+    'service': get_test_pubkey('service'),
+    'recovery': get_test_pubkey('recovery'),
+    'sender': get_test_pubkey('sender'),
+    'receiver': get_test_pubkey('receiver'),
+    'publisher': get_test_pubkey('publisher'),
+    'buyer': get_test_pubkey('buyer'),
+    'member1': get_test_pubkey('member1'),
+    'member2': get_test_pubkey('member2'),
+    'member3': get_test_pubkey('member3'),
+    'member4': get_test_pubkey('member4'),
+    'member5': get_test_pubkey('member5'),
+}
+
+
+def print_test_keys():
+    """Print all test keys for debugging."""
+    print("=" * 70)
+    print("CLTV Plugin Test Keys (DO NOT USE WITH REAL FUNDS)")
+    print("=" * 70)
+    for name, data in TEST_KEYS.items():
+        privkey_hex = data['privkey_hex']
+        pubkey_hex = get_test_pubkey(name)
+        print(f"\n{name.upper()} - {data['description']}")
+        print(f"  Private: {privkey_hex}")
+        print(f"  Public:  {pubkey_hex}")
+    print("\n" + "=" * 70)
+
+
+def get_test_keys_for_contract(contract_name: str) -> Dict[str, str]:
+    """
+    Get all test pubkeys for a contract type.
+    
+    Uses ParamSpec.test_key_name from ContractDefinition as single source of truth.
+    
+    Args:
+        contract_name: One of 'hodl', 'escrow', 'twofactor', 
+                      'payment_channel', 'data_publishing'
+    
+    Returns:
+        Dict mapping param names to pubkey hex strings
+    
+    Example:
+        >>> keys = get_test_keys_for_contract('escrow')
+        >>> keys['alice']  # '03d30199d74...'
+        >>> keys['bob']    # '03d9f1...'
+        >>> keys['lenny']  # '02f1...'
+    """
+    try:
+        from .cltv_lib.contracts import CONTRACTS
+        
+        contract = CONTRACTS.get(contract_name)
+        if not contract:
+            raise BitcoinException(f"Unknown contract: {contract_name}")
+        
+        result = {}
+        for param in contract.params:
+            if param.test_key_name:
+                try:
+                    result[param.name] = get_test_pubkey(param.test_key_name)
+                except ValueError:
+                    pass  # Skip unknown test keys
+        
+        return result
+        
+    except ImportError:
+        # Fallback if contracts module not available
+        return {}
+
+
+if __name__ == '__main__':
+    # Test the module
+    print_test_keys()
+    
+    # Verify pubkeys match expected values
+    print("\nVerifying pubkey derivation...")
+    alice = get_test_keypair('alice')
+    print(f"✓ Alice pubkey: {alice['pubkey'][:32]}...")
+    print(f"✓ All test keys loaded successfully")
+    
+    # Test contract key lookup
+    print("\nTesting contract key lookup...")
+    try:
+        escrow_keys = get_test_keys_for_contract('escrow')
+        print(f"✓ Escrow keys: {list(escrow_keys.keys())}")
+    except Exception as e:
+        print(f"  (Contract lookup not available: {e})")
